@@ -60,6 +60,16 @@ export class ChecklistPanel {
         if (msg.command === "toggle" && msg.index !== undefined) {
           this._items[msg.index].checked = msg.checked;
           this._updateProgress();
+        } else if (msg.command === "markAll") {
+          this._items.forEach((item) => {
+            item.checked = true;
+          });
+          this._render();
+        } else if (msg.command === "resetAll") {
+          this._items.forEach((item) => {
+            item.checked = false;
+          });
+          this._render();
         }
       },
       null,
@@ -119,21 +129,24 @@ export class ChecklistPanel {
 
     let sectionsHtml = "";
     sections.forEach((items, section) => {
+      const done = items.filter(({ index }) => this._items[index].checked).length;
       const itemsHtml = items
         .map(
           ({ text, index }) =>
             `<li class="cl-item">
               <label>
-                <input type="checkbox" data-index="${index}" onchange="toggle(this)"/>
+                <input type="checkbox" data-index="${index}" onchange="toggle(this)" ${this._items[index].checked ? "checked" : ""}/>
                 <span>${escapeHtml(text)}</span>
               </label>
             </li>`
         )
         .join("");
-      sectionsHtml += `<div class="section"><h3>${escapeHtml(section)}</h3><ul>${itemsHtml}</ul></div>`;
+      sectionsHtml += `<div class="section"><h3>${escapeHtml(section)} <span class="section-progress">${done}/${items.length}</span></h3><ul>${itemsHtml}</ul></div>`;
     });
 
     const total = this._items.length;
+    const done = this._items.filter((i) => i.checked).length;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
     this._panel.webview.html = `<!DOCTYPE html>
 <html lang="en">
@@ -155,22 +168,37 @@ export class ChecklistPanel {
   .progress-bar { background: var(--vscode-charts-green, #4ec9b0); height: 6px; border-radius: 4px; transition: width 0.3s; }
   .progress-label { font-size: 12px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; }
   .section { margin-bottom: 16px; }
+  .toolbar { display: flex; gap: 8px; margin: 10px 0 14px; }
+  .btn { border: 1px solid var(--vscode-panel-border); background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+  .btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
+  .section-progress { font-size: 11px; color: var(--vscode-descriptionForeground); font-weight: normal; }
 </style>
 </head>
 <body>
-<h2>☑ ${escapeHtml(this.phase.label)} Checklist</h2>
-<div class="progress-label" id="progressLabel">0 / ${total} complete</div>
-<div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+<h2>${escapeHtml(this.phase.label)} Checklist</h2>
+<div class="progress-label" id="progressLabel">${done} / ${total} complete</div>
+<div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:${pct}%"></div></div>
+<div class="toolbar">
+  <button class="btn" onclick="markAll()">Mark all complete</button>
+  <button class="btn" onclick="resetAll()">Reset</button>
+</div>
 ${sectionsHtml}
 <script>
   const vscode = acquireVsCodeApi();
-  const total = ${total};
 
   function toggle(el) {
     const index = parseInt(el.dataset.index, 10);
     const li = el.closest('li');
     li.classList.toggle('done', el.checked);
     vscode.postMessage({ command: 'toggle', index, checked: el.checked });
+  }
+
+  function markAll() {
+    vscode.postMessage({ command: 'markAll' });
+  }
+
+  function resetAll() {
+    vscode.postMessage({ command: 'resetAll' });
   }
 
   window.addEventListener('message', event => {

@@ -240,9 +240,14 @@ function renderRequirementList(title, items, options) {
         const exists = fs.existsSync(fullPath);
         const actionLabel = exists ? "Open" : options.allowCreate ? "Create" : "Missing";
         const disabled = exists || options.allowCreate ? "" : " disabled";
+        const statusText = exists ? "Available" : "Missing";
+        const statusClass = exists ? "req-state ok" : "req-state missing";
         return [
             '<li class="requirement-item">',
+            '<div class="requirement-meta">',
             `<code>${escapeHtml(item)}</code>`,
+            `<span class="${statusClass}">${statusText}</span>`,
+            '</div>',
             `<button class="path-action" data-path="${escapeHtml(item)}" data-kind="${options.entryKind}" data-create="${options.allowCreate ? "true" : "false"}"${disabled}>${actionLabel}</button>`,
             "</li>",
         ].join("");
@@ -274,6 +279,9 @@ function renderRequirementsSummary(repoRoot, requirements) {
             entryKind: "file",
             allowCreate: true,
         }),
+        '<div class="btn-row compact">',
+        '<button class="btn btn-secondary" id="createMissingOutputsBtn">Create Missing Outputs</button>',
+        "</div>",
         "</section>",
     ].join("");
 }
@@ -320,7 +328,28 @@ class PhasePanel {
             case "openPath":
                 await this._openRequirementPath(msg.relativePath, msg.kind, msg.createIfMissing === true);
                 break;
+            case "createMissingOutputs":
+                await this._createMissingOutputFiles();
+                break;
         }
+    }
+    async _createMissingOutputFiles() {
+        const repoRoot = resolveRepoRoot(this.context);
+        const requirements = readPhaseRequirements(repoRoot, this.phase);
+        const created = [];
+        for (const relativePath of requirements.requiredOutputFiles) {
+            const fullPath = path.join(repoRoot, relativePath);
+            if (!fs.existsSync(fullPath)) {
+                ensureTextFile(repoRoot, relativePath, "");
+                created.push(relativePath);
+            }
+        }
+        if (created.length === 0) {
+            vscode.window.showInformationMessage("All required output files already exist.");
+            return;
+        }
+        vscode.window.showInformationMessage(`Created ${created.length} required output file(s).`);
+        this._render();
     }
     async _openRequirementPath(relativePath, kind, createIfMissing) {
         if (!relativePath || !kind) {
@@ -383,9 +412,13 @@ class PhasePanel {
 <style>
   * { box-sizing: border-box; }
   body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); background: var(--vscode-editor-background); margin: 0; padding: 0; }
+  .hero { padding: 14px 20px 10px; border-bottom: 1px solid var(--vscode-panel-border); background: linear-gradient(180deg, var(--vscode-editorGroupHeader-tabsBackground), transparent); }
+  .hero h1 { margin: 0; font-size: 1.1rem; }
+  .hero p { margin: 4px 0 0; color: var(--vscode-descriptionForeground); }
   .tabs { display: flex; border-bottom: 1px solid var(--vscode-panel-border); background: var(--vscode-editorGroupHeader-tabsBackground); padding: 0 8px; gap: 2px; }
-  .tab { padding: 8px 16px; cursor: pointer; border: none; background: transparent; color: var(--vscode-tab-inactiveForeground); font-size: 13px; border-bottom: 2px solid transparent; }
-  .tab.active { color: var(--vscode-tab-activeForeground); border-bottom-color: var(--vscode-focusBorder); }
+  .tab { padding: 8px 14px; cursor: pointer; border: none; background: transparent; color: var(--vscode-tab-inactiveForeground); font-size: 13px; border-bottom: 2px solid transparent; }
+  .tab.active, .tab[aria-selected="true"] { color: var(--vscode-tab-activeForeground); border-bottom-color: var(--vscode-focusBorder); }
+  .tab:focus-visible, .btn:focus-visible, .path-action:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 1px; }
   .tab-content { display: none; padding: 16px 20px; }
   .tab-content.active { display: block; }
   h1 { font-size: 1.4em; margin-top: 0; }
@@ -405,6 +438,7 @@ class PhasePanel {
   .btn-secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
   .btn-secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
   .btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .btn-row.compact { margin-top: 12px; }
   #aiOutput { margin-top: 16px; background: var(--vscode-textCodeBlock-background); border-radius: 4px; padding: 12px; min-height: 60px; white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 0.9em; display: none; }
   #aiOutput.visible { display: block; }
   .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--vscode-progressBar-background); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -417,25 +451,33 @@ class PhasePanel {
   .requirement-card h3 { margin-bottom: 8px; }
   .requirement-card ul { margin: 0; }
   .requirement-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .requirement-meta { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .requirement-meta code { overflow-wrap: anywhere; }
+  .req-state { font-size: 11px; border: 1px solid var(--vscode-panel-border); border-radius: 10px; padding: 1px 6px; }
+  .req-state.ok { color: var(--vscode-testing-iconPassed); }
+  .req-state.missing { color: var(--vscode-testing-iconFailed); }
   .path-action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
   .path-action:hover:enabled { background: var(--vscode-button-secondaryHoverBackground); }
   .path-action:disabled { cursor: not-allowed; opacity: 0.6; }
 </style>
 </head>
 <body>
-<div class="tabs">
-  <button class="tab active" onclick="showTab('lifecycle')">📋 Lifecycle Guide</button>
-  <button class="tab" onclick="showTab('prompt')">🤖 AI Prompt</button>
-  <button class="tab" onclick="showTab('agent')">🧠 Agent Guide</button>
-  <button class="tab" onclick="showTab('run')">▶ Run AI</button>
+<header class="hero">
+  <h1>${escapeHtml(this.phase.label)}</h1>
+  <p>Review requirements, inspect lifecycle guidance, and run automation prompts in one workflow.</p>
+</header>
+<div class="tabs" role="tablist" aria-label="Phase content tabs">
+  <button class="tab active" role="tab" aria-selected="true" aria-controls="lifecycle" onclick="showTab('lifecycle', this)">Lifecycle Guide</button>
+  <button class="tab" role="tab" aria-selected="false" aria-controls="prompt" onclick="showTab('prompt', this)">AI Prompt</button>
+  <button class="tab" role="tab" aria-selected="false" aria-controls="agent" onclick="showTab('agent', this)">Agent Guide</button>
+  <button class="tab" role="tab" aria-selected="false" aria-controls="run" onclick="showTab('run', this)">Run AI</button>
 </div>
 
 <div id="lifecycle" class="tab-content active">${requirementsHtml}${lifecycleHtml}</div>
 <div id="prompt" class="tab-content">
-  ${requirementsHtml}
   ${promptHtml}
   <div class="btn-row">
-    <button class="btn btn-secondary" onclick="copyDefaultPrompt()">📋 Copy Prompt</button>
+    <button class="btn btn-secondary" onclick="copyDefaultPrompt()">Copy Prompt</button>
     <button class="btn btn-primary" onclick="showTab('run'); document.getElementById('customPrompt').value = defaultPrompt;">Use in AI Runner →</button>
   </div>
 </div>
@@ -447,7 +489,7 @@ class PhasePanel {
   <div class="btn-row">
     <button class="btn btn-primary" onclick="runPrompt()">▶ Run Prompt</button>
     <button class="btn btn-secondary" onclick="useDefault()">Use Default Prompt</button>
-    <button class="btn btn-secondary" onclick="openChecklist()">☑ Open Checklist</button>
+    <button class="btn btn-secondary" onclick="openChecklist()">Open Checklist</button>
   </div>
   <div class="status-bar" id="statusBar"></div>
   <div id="aiOutput"></div>
@@ -457,12 +499,21 @@ class PhasePanel {
   const vscode = acquireVsCodeApi();
   const defaultPrompt = \`${escapedPrompt}\`;
 
-  function showTab(id) {
+  function showTab(id, buttonEl) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(el => {
+      el.classList.remove('active');
+      el.setAttribute('aria-selected', 'false');
+    });
     document.getElementById(id).classList.add('active');
-    const idx = ['lifecycle','prompt','agent','run'].indexOf(id);
-    document.querySelectorAll('.tab')[idx].classList.add('active');
+    if (!buttonEl) {
+      const idx = ['lifecycle','prompt','agent','run'].indexOf(id);
+      buttonEl = document.querySelectorAll('.tab')[idx];
+    }
+    if (buttonEl) {
+      buttonEl.classList.add('active');
+      buttonEl.setAttribute('aria-selected', 'true');
+    }
   }
 
   function runPrompt() {
@@ -486,6 +537,26 @@ class PhasePanel {
   function openChecklist() {
     vscode.postMessage({ command: 'openChecklist' });
   }
+
+  const createMissingOutputsBtn = document.getElementById('createMissingOutputsBtn');
+  if (createMissingOutputsBtn) {
+    createMissingOutputsBtn.addEventListener('click', () => {
+      vscode.postMessage({ command: 'createMissingOutputs' });
+    });
+  }
+
+  document.querySelectorAll('.tab').forEach((tab, index, tabs) => {
+    tab.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') {
+        return;
+      }
+      event.preventDefault();
+      const delta = event.key === 'ArrowRight' ? 1 : -1;
+      const next = (index + delta + tabs.length) % tabs.length;
+      tabs[next].focus();
+      tabs[next].click();
+    });
+  });
 
   document.addEventListener('click', (event) => {
     const target = event.target;

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-label="Phase panel screenshot mockup">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="760" rx="28" fill="url(#bg2)"/>
+  <rect x="32" y="28" width="1136" height="704" rx="22" fill="#0b1220" stroke="#334155" stroke-width="1.5"/>
+  <rect x="52" y="50" width="1096" height="42" rx="12" fill="#111827"/>
+  <text x="76" y="78" fill="#e5e7eb" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">01 · Plan</text>
+  <rect x="52" y="108" width="1096" height="58" rx="14" fill="#111827" stroke="#334155" stroke-width="1.2"/>
+  <text x="76" y="144" fill="#93c5fd" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">Repository requirements</text>
+  <rect x="52" y="184" width="1096" height="432" rx="18" fill="#111827" stroke="#334155" stroke-width="1.2"/>
+
+  <rect x="78" y="212" width="190" height="34" rx="11" fill="#1d4ed8"/>
+  <rect x="282" y="212" width="142" height="34" rx="11" fill="#1f2937"/>
+  <rect x="438" y="212" width="120" height="34" rx="11" fill="#1f2937"/>
+  <rect x="572" y="212" width="110" height="34" rx="11" fill="#1f2937"/>
+  <text x="173" y="234" text-anchor="middle" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">Lifecycle Guide</text>
+  <text x="353" y="234" text-anchor="middle" fill="#cbd5e1" font-family="Segoe UI, Arial, sans-serif" font-size="14">AI Prompt</text>
+  <text x="498" y="234" text-anchor="middle" fill="#cbd5e1" font-family="Segoe UI, Arial, sans-serif" font-size="14">Agent Guide</text>
+  <text x="627" y="234" text-anchor="middle" fill="#cbd5e1" font-family="Segoe UI, Arial, sans-serif" font-size="14">Run AI</text>
+
+  <rect x="78" y="274" width="1040" height="92" rx="16" fill="#0b1220" stroke="#334155" stroke-width="1.2"/>
+  <text x="104" y="308" fill="#93c5fd" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">Required output files</text>
+  <text x="104" y="336" fill="#e5e7eb" font-family="Segoe UI, Arial, sans-serif" font-size="16">docs/architecture/design-draft.md, docs/adr/ADR-0001-design-decision.md, docs/api/openapi.yaml, docs/security/threat-model.md</text>
+
+  <rect x="78" y="384" width="500" height="176" rx="16" fill="#0b1220" stroke="#334155" stroke-width="1.2"/>
+  <rect x="596" y="384" width="522" height="176" rx="16" fill="#0b1220" stroke="#334155" stroke-width="1.2"/>
+  <text x="104" y="418" fill="#93c5fd" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">Open questions</text>
+  <rect x="104" y="438" width="436" height="14" rx="7" fill="#1f2937"/>
+  <rect x="104" y="466" width="388" height="14" rx="7" fill="#1f2937"/>
+  <rect x="104" y="494" width="416" height="14" rx="7" fill="#1f2937"/>
+  <rect x="104" y="522" width="350" height="14" rx="7" fill="#1f2937"/>
+
+  <text x="622" y="418" fill="#93c5fd" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700">Actions</text>
+  <rect x="622" y="438" width="166" height="32" rx="10" fill="#1d4ed8"/>
+  <rect x="802" y="438" width="166" height="32" rx="10" fill="#374151"/>
+  <rect x="982" y="438" width="110" height="32" rx="10" fill="#374151"/>
+  <text x="705" y="459" text-anchor="middle" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">Run Prompt</text>
+  <text x="885" y="459" text-anchor="middle" fill="#e5e7eb" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">Open Checklist</text>
+  <text x="1037" y="459" text-anchor="middle" fill="#e5e7eb" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">Create</text>
+
+  <text x="600" y="660" text-anchor="middle" fill="#60a5fa" font-family="Segoe UI, Arial, sans-serif" font-size="15">Phase panel mockup placeholder - replace with a real capture</text>
+</svg>

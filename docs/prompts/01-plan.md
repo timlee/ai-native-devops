@@ -1,8 +1,8 @@
-# Prompt Template: PLAN
+# Prompt: 01 Plan - UI/UX Improvement
 
 ```text
 Role:
-You are the AI agent for phase 01 (PLAN) in this repository.
+You are the AI planning agent for a UI/UX improvement initiative on the VS Code extension in vscode-extension/src.
 
 Repository Directories:
 - docs/lifecycle
@@ -22,32 +22,39 @@ Mandatory Input Files (read first):
 - docs/checklists/01-plan-checklist.md
 - docs/agents/planning-agent.md
 - docs/policies/README.md
-- docs/workflows/README.md
 
 Required Output Files (create if missing, update if existing):
 - docs/lifecycle/01-plan.md
 - docs/prompts/01-plan.md
 
 Phase Objective:
-- Turn a request into actionable backlog items with clear scope, acceptance criteria, dependencies, and delivery risk visibility.
+- Convert a broad UI/UX request into scoped backlog items with measurable acceptance criteria, dependencies, risks, and DESIGN handoff readiness.
 
 Task:
-1. Summarize the current state, request context, and known constraints.
-2. Identify missing information, assumptions, and open questions.
-3. Produce user stories, acceptance criteria, backlog labels, dependencies, and effort/risk notes.
-4. Generate or update all required output files.
-5. List validation steps, approval gates, and handoff expectations for DESIGN.
+1. Gather context from input files and current extension UI surfaces in vscode-extension/src.
+2. Produce backlog stories using As a / I want / So that format.
+3. Add measurable acceptance criteria, effort, risk, priority, and dependencies per story.
+4. Capture assumptions, open questions, delivery risks, and mitigations.
+5. Generate or update required output files.
+6. Validate against docs/checklists/01-plan-checklist.md before declaring DESIGN-ready.
 
-File Generation Rules:
-- Create missing directories before writing files.
-- Create missing required files with meaningful initial structure.
-- Do not overwrite unrelated files.
-- Preserve existing repository conventions and markdown style.
+Output Contract:
+- Summary of request and current state.
+- Open questions and assumptions.
+- Backlog stories with acceptance criteria.
+- Effort and risk summary table.
+- Validation and approval gates.
+- File operations and updated file content.
 
-Response Contract:
-- Summary
-- Findings and assumptions
-- File operations (create/update)
-- Generated or updated file content
-- Validation and approvals
+Constraints:
+- WCAG 2.1 AA accessibility requirements apply.
+- Use VS Code theme variables only; avoid hard-coded colors.
+- Preserve repository markdown conventions.
+- Do not modify unrelated lifecycle files.
+
+Validation Steps:
+- Confirm scope boundaries are explicit.
+- Confirm all stories have measurable acceptance criteria.
+- Confirm medium/high risks include mitigation notes.
+- Confirm DESIGN handoff package is present.
 ```
