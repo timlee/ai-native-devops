@@ -1,80 +1,61 @@
-# RELEASE Phase Guidelines
+# 07 RELEASE Lifecycle Guide
 
-![RELEASE Phase](../assets/images/release-phase.png)
+## Phase Objective
 
-## Objective
+Assemble a release package with changelog, risk summary, approvals, and a clear go/no-go recommendation.
 
-The RELEASE phase uses AI agents and deterministic DevOps tooling to improve speed, quality, reliability, and traceability.
+## Repository Directories
+
+- docs/lifecycle
+- docs/prompts
+- docs/checklists
+- docs/agents
+- docs/workflows
+- docs/policies
+- .github/workflows
+
+## Mandatory Input Files
+
+- docs/lifecycle/07-release.md
+- docs/prompts/07-release.md
+- docs/checklists/07-release-checklist.md
+- docs/agents/release-agent.md
+- docs/workflows/release.md
+
+## Required Output Files
+
+- docs/workflows/release.md
+- docs/lifecycle/07-release.md
 
 ## Core Activities
 
 - Versioning
-- Changelog generation
-- Release notes
-- Risk review
-- Approval preparation
+- Changelog authoring
+- Release note preparation
+- Approval review
+- Bundle preparation
 
-## Key Artifacts and Work Products
+## AI And Automation Expectations
 
-- Version tag
-- Release bundle
-- Changelog
-- Release notes
-- Approval record
+- Summarize release scope and included changes.
+- Highlight unresolved risks, dependencies, and pending checks.
+- Draft release notes and approval packet content.
+- Produce a go/no-go recommendation.
 
-## How AI Supports This Phase
+## Controls And Approval Gates
 
-AI tools such as Claude, Codex, GitHub Copilot, and internal agents should be used to:
+- Ensure prerequisite test and security gates are satisfied.
+- Document release blockers and formal exceptions.
+- Require explicit approval before DEPLOY.
+- Preserve traceability from changes to release decision.
 
-1. Summarize context from issues, pull requests, logs, docs, and previous decisions.
-2. Generate structured drafts that are easy for humans to review.
-3. Identify missing requirements, risks, edge cases, and dependencies.
-4. Produce implementation, testing, security, or operational recommendations.
-5. Create pull requests only when the scope is clear and policy allows it.
-6. Record assumptions and evidence for auditability.
+## Validation And Exit Criteria
 
-## Recommended Agent Responsibilities
+- Release notes and risk summary are complete.
+- Approval requirements are documented.
+- Version proposal and release bundle are clear.
+- Handoff to DEPLOY is explicit.
 
-| Agent Type | Responsibility |
-|---|---|
-| Claude | Reasoning, analysis, documentation, trade-off review |
-| Codex | Implementation, refactoring, test generation, CI fixes |
-| GitHub Copilot | IDE assistance, PR assistance, repository-native suggestions |
-| Internal Agent | Organization-specific automation and tool integration |
+## Handoff
 
-## Required Controls
-
-- All changes must be linked to an issue, PR, workflow run, or incident record.
-- Production-impacting changes require approval gates.
-- Security and compliance exceptions must be documented.
-- Generated outputs must be reviewed for correctness and completeness.
-
-## Example Prompt
-
-```text
-You are the RELEASE phase AI agent.
-
-Context:
-- Repository: <repo>
-- Work item: <issue or ticket>
-- Relevant docs: <links or excerpts>
-- Constraints: <security, compliance, deadlines, compatibility>
-
-Task:
-Analyze the current RELEASE phase work and produce:
-1. Summary of current state
-2. Recommended next steps
-3. Risks and missing information
-4. Artifacts to create or update
-5. Validation checklist
-6. Human approval points
-
-Output as structured Markdown.
-```
-
-## Exit Criteria
-
-- Required artifacts are complete.
-- Quality gates for this phase are satisfied.
-- Risks are documented or accepted.
-- Handoff to the next phase is clear.
+- Provide release package, approvals, rollback expectations, and readiness notes to DEPLOY.

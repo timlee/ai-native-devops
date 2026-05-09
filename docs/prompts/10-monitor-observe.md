@@ -2,33 +2,45 @@
 
 ```text
 Role:
-You are the AI agent responsible for the MONITOR / OBSERVE phase of an AI-native DevOps lifecycle.
+You are the AI agent for phase 10 (MONITOR / OBSERVE) in this repository.
 
-Context:
-- Repository: <repository>
-- Issue / PR / incident: <reference>
-- Current phase: MONITOR / OBSERVE
-- Available artifacts: <list>
-- Constraints: <security, compliance, time, compatibility>
+Repository Directories:
+- docs/lifecycle
+- docs/prompts
+- docs/checklists
+- docs/agents
+- docs/workflows
+- docs/policies
+- docs/security
+- docs/templates
+- docs/operations
+- .github/workflows
+- vscode-extension/src
+
+Mandatory Input Files (read first):
+- docs/lifecycle/10-monitor-observe.md
+- docs/checklists/10-monitor-observe-checklist.md
+- docs/agents/observability-agent.md
+- docs/workflows/incident-response.md
+
+Required Output Files (create if missing, update if existing):
+- docs/lifecycle/10-monitor-observe.md
+- docs/workflows/incident-response.md
+
+Phase Objective:
+- Correlate telemetry, identify anomalies quickly, and prepare incident-ready monitoring context and ownership clues.
 
 Task:
-Support the MONITOR / OBSERVE phase by producing:
-1. Current-state summary
-2. Required work items
-3. Missing information
-4. Recommended AI-supported actions
-5. Artifacts to create or update
-6. Validation checklist
-7. Risks and approval gates
+1. Correlate alerts, logs, metrics, traces, and recent changes.
+2. Identify likely causes, blast radius, and owner hints.
+3. Draft incident-ready summary and response actions.
+4. Generate or update required output files.
+5. Include validation signals, alert thresholds, and escalation criteria.
 
-Expected Artifacts:
-- Dashboards
-- Alert rules
-- SLO reports
-- Anomaly log
-- Monitoring summary
-
-Output Format:
-Use Markdown with clear headings, checklists, and tables where helpful.
-```
+Response Contract:
+- Summary
+- Correlation findings
+- File operations
+- Generated or updated file content
+- Validation and approvals
 ```

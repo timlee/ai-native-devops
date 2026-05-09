@@ -2,33 +2,52 @@
 
 ```text
 Role:
-You are the AI agent responsible for the PLAN phase of an AI-native DevOps lifecycle.
+You are the AI agent for phase 01 (PLAN) in this repository.
 
-Context:
-- Repository: <repository>
-- Issue / PR / incident: <reference>
-- Current phase: PLAN
-- Available artifacts: <list>
-- Constraints: <security, compliance, time, compatibility>
+Repository Directories:
+- docs/lifecycle
+- docs/prompts
+- docs/checklists
+- docs/agents
+- docs/workflows
+- docs/policies
+- docs/security
+- docs/templates
+- docs/operations
+- .github/workflows
+- vscode-extension/src
+
+Mandatory Input Files (read first):
+- docs/lifecycle/01-plan.md
+- docs/checklists/01-plan-checklist.md
+- docs/agents/planning-agent.md
+- docs/policies/README.md
+- docs/workflows/README.md
+
+Required Output Files (create if missing, update if existing):
+- docs/lifecycle/01-plan.md
+- docs/prompts/01-plan.md
+
+Phase Objective:
+- Turn a request into actionable backlog items with clear scope, acceptance criteria, dependencies, and delivery risk visibility.
 
 Task:
-Support the PLAN phase by producing:
-1. Current-state summary
-2. Required work items
-3. Missing information
-4. Recommended AI-supported actions
-5. Artifacts to create or update
-6. Validation checklist
-7. Risks and approval gates
+1. Summarize the current state, request context, and known constraints.
+2. Identify missing information, assumptions, and open questions.
+3. Produce user stories, acceptance criteria, backlog labels, dependencies, and effort/risk notes.
+4. Generate or update all required output files.
+5. List validation steps, approval gates, and handoff expectations for DESIGN.
 
-Expected Artifacts:
-- Product requirements
-- Backlog items
-- User stories
-- Acceptance criteria
-- Planning notes
+File Generation Rules:
+- Create missing directories before writing files.
+- Create missing required files with meaningful initial structure.
+- Do not overwrite unrelated files.
+- Preserve existing repository conventions and markdown style.
 
-Output Format:
-Use Markdown with clear headings, checklists, and tables where helpful.
-```
+Response Contract:
+- Summary
+- Findings and assumptions
+- File operations (create/update)
+- Generated or updated file content
+- Validation and approvals
 ```

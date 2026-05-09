@@ -9,7 +9,7 @@ import {
   getAgentSpecByPhase,
   AgentTrigger,
 } from "./agentAutomation";
-import { ensureTextFile, resolveRepoRoot } from "./phasePanel";
+import { ensureTextFile, readPhaseRequirements, resolveRepoRoot } from "./phasePanel";
 import {
   buildQueueContext,
   readQueuedEvents,
@@ -205,10 +205,14 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         const repoRoot = resolveRepoRoot(context);
+        const requirements = readPhaseRequirements(repoRoot, selected.phase);
+        const artifactPaths = requirements.requiredOutputFiles.length > 0
+          ? requirements.requiredOutputFiles
+          : spec.artifactPaths;
         const created: string[] = [];
         const now = new Date().toISOString();
 
-        for (const relativePath of spec.artifactPaths) {
+        for (const relativePath of artifactPaths) {
           const content = [
             `# ${spec.agentName} Artifact`,
             "",
@@ -465,11 +469,15 @@ async function runAgentAutomationInteractive(
   });
   if (!requestContext) return;
 
+  const repoRoot = resolveRepoRoot(context);
+  const requirements = readPhaseRequirements(repoRoot, selected.phase);
+
   const prompt = buildAutomationPrompt(
     selected.phase,
     spec,
     trigger,
-    requestContext
+    requestContext,
+    requirements
   );
 
   const panel = PhasePanel.show(selected.phase, context, (ph, pr, pnl) =>
@@ -507,11 +515,13 @@ async function processWebhookQueue(
       continue;
     }
     const trigger = resolveTrigger(resolved.spec, event.triggerId);
+    const requirements = readPhaseRequirements(repoRoot, resolved.phase);
     const prompt = buildAutomationPrompt(
       resolved.phase,
       resolved.spec,
       trigger,
-      buildQueueContext(event)
+      buildQueueContext(event),
+      requirements
     );
 
     output.appendLine(

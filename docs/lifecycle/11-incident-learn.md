@@ -6,75 +6,66 @@
 
 The INCIDENT / LEARN phase uses AI agents and deterministic DevOps tooling to improve speed, quality, reliability, and traceability.
 
+# 11 INCIDENT / LEARN Lifecycle Guide
+
+## Phase Objective
+
+Capture the incident, build RCA hypotheses, document lessons learned, and feed follow-up work back into the backlog.
+
+## Repository Directories
+
+- docs/lifecycle
+- docs/prompts
+- docs/checklists
+- docs/agents
+- docs/templates
+- docs/operations
+- docs/workflows
+
+## Mandatory Input Files
+
+- docs/lifecycle/11-incident-learn.md
+- docs/prompts/11-incident-learn.md
+- docs/checklists/11-incident-learn-checklist.md
+- docs/agents/incident-agent.md
+- docs/templates/postmortem-template.md
+
+## Required Output Files
+
+- docs/templates/postmortem-template.md
+- docs/lifecycle/11-incident-learn.md
+- docs/operations/incident-process.md
+
 ## Core Activities
 
-- Incident triage
-- Response coordination
-- Mitigation
-- Timeline reconstruction
-- RCA and postmortem
+- Incident coordination
+- Timeline building
+- RCA analysis
+- Postmortem authoring
+- Action item tracking
 
-## Key Artifacts and Work Products
+## AI And Automation Expectations
 
-- Incident ticket
-- Timeline
-- RCA report
-- Postmortem
-- Action items
+- Build incident timeline and RCA hypotheses from evidence.
+- Draft postmortem and communications summary.
+- Convert learnings into backlog-ready action items.
+- Capture ownership and due dates.
 
-## How AI Supports This Phase
+## Controls And Approval Gates
 
-AI tools such as Claude, Codex, GitHub Copilot, and internal agents should be used to:
+- Preserve factual accuracy and evidence references.
+- Distinguish hypotheses from confirmed causes.
+- Require review of postmortem and action items.
+- Feed severe findings back into planning and security governance.
 
-1. Summarize context from issues, pull requests, logs, docs, and previous decisions.
-2. Generate structured drafts that are easy for humans to review.
-3. Identify missing requirements, risks, edge cases, and dependencies.
-4. Produce implementation, testing, security, or operational recommendations.
-5. Create pull requests only when the scope is clear and policy allows it.
-6. Record assumptions and evidence for auditability.
+## Validation And Exit Criteria
 
-## Recommended Agent Responsibilities
+- Timeline, RCA, and action items are documented.
+- Ownership and due dates are clear.
+- Incident process guidance is current.
+- Handoff back to PLAN or DESIGN is clear for follow-up work.
 
-| Agent Type | Responsibility |
-|---|---|
-| Claude | Reasoning, analysis, documentation, trade-off review |
-| Codex | Implementation, refactoring, test generation, CI fixes |
-| GitHub Copilot | IDE assistance, PR assistance, repository-native suggestions |
-| Internal Agent | Organization-specific automation and tool integration |
+## Handoff
 
-## Required Controls
+- Convert approved follow-up actions into backlog items for PLAN and DESIGN.
 
-- All changes must be linked to an issue, PR, workflow run, or incident record.
-- Production-impacting changes require approval gates.
-- Security and compliance exceptions must be documented.
-- Generated outputs must be reviewed for correctness and completeness.
-
-## Example Prompt
-
-```text
-You are the INCIDENT / LEARN phase AI agent.
-
-Context:
-- Repository: <repo>
-- Work item: <issue or ticket>
-- Relevant docs: <links or excerpts>
-- Constraints: <security, compliance, deadlines, compatibility>
-
-Task:
-Analyze the current INCIDENT / LEARN phase work and produce:
-1. Summary of current state
-2. Recommended next steps
-3. Risks and missing information
-4. Artifacts to create or update
-5. Validation checklist
-6. Human approval points
-
-Output as structured Markdown.
-```
-
-## Exit Criteria
-
-- Required artifacts are complete.
-- Quality gates for this phase are satisfied.
-- Risks are documented or accepted.
-- Handoff to the next phase is clear.

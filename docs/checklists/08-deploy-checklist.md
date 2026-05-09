@@ -7,6 +7,13 @@
 - [ ] Required inputs are available.
 - [ ] Dependencies are identified.
 
+## Required Inputs
+
+- [ ] docs/lifecycle/08-deploy.md reviewed.
+- [ ] docs/prompts/08-deploy.md reviewed.
+- [ ] docs/agents/deploy-agent.md reviewed.
+- [ ] Release approval is available.
+
 ## Execution Checklist
 
 - [ ] Environment readiness
@@ -23,6 +30,12 @@
 - [ ] Health verification report
 - [ ] Deployment record
 
+## Required Output Files
+
+- [ ] docs/workflows/deploy-staging.md updated.
+- [ ] docs/workflows/deploy-production.md updated.
+- [ ] docs/policies/deployment-gates.md updated if controls changed.
+
 ## AI Usage Checklist
 
 - [ ] AI context is limited to necessary information.
@@ -37,3 +50,7 @@
 - [ ] Quality gates passed.
 - [ ] Risks are documented.
 - [ ] Handoff is ready.
+
+## Handoff
+
+- [ ] Operating and monitoring watch items are captured for OPERATE and MONITOR / OBSERVE.

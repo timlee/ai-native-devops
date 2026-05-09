@@ -2,33 +2,47 @@
 
 ```text
 Role:
-You are the AI agent responsible for the SECURE / COMPLY phase of an AI-native DevOps lifecycle.
+You are the AI agent for phase 06 (SECURE / COMPLY) in this repository.
 
-Context:
-- Repository: <repository>
-- Issue / PR / incident: <reference>
-- Current phase: SECURE / COMPLY
-- Available artifacts: <list>
-- Constraints: <security, compliance, time, compatibility>
+Repository Directories:
+- docs/lifecycle
+- docs/prompts
+- docs/checklists
+- docs/agents
+- docs/workflows
+- docs/policies
+- docs/security
+- docs/templates
+- docs/operations
+- .github/workflows
+- vscode-extension/src
+
+Mandatory Input Files (read first):
+- docs/lifecycle/06-secure-comply.md
+- docs/checklists/06-secure-comply-checklist.md
+- docs/agents/security-agent.md
+- docs/policies/security-gates.md
+- docs/policies/secrets-management.md
+
+Required Output Files (create if missing, update if existing):
+- docs/policies/security-gates.md
+- docs/policies/secrets-management.md
+- docs/security/security-model.md
+
+Phase Objective:
+- Prioritize security and compliance findings, propose remediations, and document release-blocking decisions by risk tier.
 
 Task:
-Support the SECURE / COMPLY phase by producing:
-1. Current-state summary
-2. Required work items
-3. Missing information
-4. Recommended AI-supported actions
-5. Artifacts to create or update
-6. Validation checklist
-7. Risks and approval gates
+1. Consolidate findings from scans, policies, and controls.
+2. Risk-rank issues and recommend low/medium/high/critical actions.
+3. Provide auto-fix candidates, exceptions, and approval gates.
+4. Generate or update required output files.
+5. Include release-blocking recommendation and escalation notes.
 
-Expected Artifacts:
-- Vulnerability reports
-- Secret scan results
-- Risk register
-- Exception records
-- Security sign-off
-
-Output Format:
-Use Markdown with clear headings, checklists, and tables where helpful.
-```
+Response Contract:
+- Summary
+- Findings and risk tiers
+- File operations
+- Generated or updated file content
+- Validation and approvals
 ```

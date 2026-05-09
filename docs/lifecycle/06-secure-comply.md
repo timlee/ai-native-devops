@@ -1,80 +1,63 @@
-# SECURE / COMPLY Phase Guidelines
+# 06 SECURE / COMPLY Lifecycle Guide
 
-![SECURE / COMPLY Phase](../assets/images/secure-comply-phase.png)
+## Phase Objective
 
-## Objective
+Prioritize security and compliance findings, propose remediations, and document release-blocking decisions by risk tier.
 
-The SECURE / COMPLY phase uses AI agents and deterministic DevOps tooling to improve speed, quality, reliability, and traceability.
+## Repository Directories
+
+- docs/lifecycle
+- docs/prompts
+- docs/checklists
+- docs/agents
+- docs/policies
+- docs/security
+- docs/workflows
+- .github/workflows
+
+## Mandatory Input Files
+
+- docs/lifecycle/06-secure-comply.md
+- docs/prompts/06-secure-comply.md
+- docs/checklists/06-secure-comply-checklist.md
+- docs/agents/security-agent.md
+- docs/policies/security-gates.md
+
+## Required Output Files
+
+- docs/policies/security-gates.md
+- docs/policies/secrets-management.md
+- docs/security/security-model.md
 
 ## Core Activities
 
 - SAST and DAST analysis
-- SCA dependency scan
+- SCA dependency scanning
 - Secret scanning
 - IaC validation
-- Compliance evidence
+- Compliance evidence review
 
-## Key Artifacts and Work Products
+## AI And Automation Expectations
 
-- Vulnerability reports
-- Secret scan results
-- Risk register
-- Exception records
-- Security sign-off
+- Consolidate findings from scans and policy checks.
+- Rank issues by exploitability and impact.
+- Propose auto-fixes, exceptions, and escalation paths.
+- Document release-blocking recommendations.
 
-## How AI Supports This Phase
+## Controls And Approval Gates
 
-AI tools such as Claude, Codex, GitHub Copilot, and internal agents should be used to:
+- Do not weaken security controls to pass checks.
+- Document exceptions formally.
+- Require security approval for high or critical findings.
+- Block release on unresolved critical findings unless formally accepted.
 
-1. Summarize context from issues, pull requests, logs, docs, and previous decisions.
-2. Generate structured drafts that are easy for humans to review.
-3. Identify missing requirements, risks, edge cases, and dependencies.
-4. Produce implementation, testing, security, or operational recommendations.
-5. Create pull requests only when the scope is clear and policy allows it.
-6. Record assumptions and evidence for auditability.
+## Validation And Exit Criteria
 
-## Recommended Agent Responsibilities
+- Findings are consolidated and ranked.
+- Remediation path or exception exists for significant issues.
+- Security guidance artifacts are updated.
+- Handoff to RELEASE is explicit.
 
-| Agent Type | Responsibility |
-|---|---|
-| Claude | Reasoning, analysis, documentation, trade-off review |
-| Codex | Implementation, refactoring, test generation, CI fixes |
-| GitHub Copilot | IDE assistance, PR assistance, repository-native suggestions |
-| Internal Agent | Organization-specific automation and tool integration |
+## Handoff
 
-## Required Controls
-
-- All changes must be linked to an issue, PR, workflow run, or incident record.
-- Production-impacting changes require approval gates.
-- Security and compliance exceptions must be documented.
-- Generated outputs must be reviewed for correctness and completeness.
-
-## Example Prompt
-
-```text
-You are the SECURE / COMPLY phase AI agent.
-
-Context:
-- Repository: <repo>
-- Work item: <issue or ticket>
-- Relevant docs: <links or excerpts>
-- Constraints: <security, compliance, deadlines, compatibility>
-
-Task:
-Analyze the current SECURE / COMPLY phase work and produce:
-1. Summary of current state
-2. Recommended next steps
-3. Risks and missing information
-4. Artifacts to create or update
-5. Validation checklist
-6. Human approval points
-
-Output as structured Markdown.
-```
-
-## Exit Criteria
-
-- Required artifacts are complete.
-- Quality gates for this phase are satisfied.
-- Risks are documented or accepted.
-- Handoff to the next phase is clear.
+- Provide findings, fixes, blockers, and approval state to RELEASE.

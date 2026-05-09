@@ -1,10 +1,32 @@
-# PLAN Phase Guidelines
+# 01 PLAN Lifecycle Guide
 
-![PLAN Phase](../assets/images/plan-phase.png)
+## Phase Objective
 
-## Objective
+Turn incoming requests into actionable backlog items with clear scope, acceptance criteria, dependencies, and delivery risks.
 
-The PLAN phase uses AI agents and deterministic DevOps tooling to improve speed, quality, reliability, and traceability.
+## Repository Directories
+
+- docs/lifecycle
+- docs/prompts
+- docs/checklists
+- docs/agents
+- docs/workflows
+- docs/policies
+- .github/workflows
+- vscode-extension/src
+
+## Mandatory Input Files
+
+- docs/lifecycle/01-plan.md
+- docs/prompts/01-plan.md
+- docs/checklists/01-plan-checklist.md
+- docs/agents/planning-agent.md
+- docs/policies/README.md
+
+## Required Output Files
+
+- docs/lifecycle/01-plan.md
+- docs/prompts/01-plan.md
 
 ## Core Activities
 
@@ -14,67 +36,27 @@ The PLAN phase uses AI agents and deterministic DevOps tooling to improve speed,
 - Effort and risk estimation
 - Backlog prioritization
 
-## Key Artifacts and Work Products
+## AI And Automation Expectations
 
-- Product requirements
-- Backlog items
-- User stories
-- Acceptance criteria
-- Planning notes
+- Summarize context from issues, PRs, and existing documentation.
+- Identify missing requirements, assumptions, dependencies, and risks.
+- Draft backlog-ready artifacts in reviewable Markdown.
+- Capture validation expectations and next-phase handoff notes.
 
-## How AI Supports This Phase
+## Controls And Approval Gates
 
-AI tools such as Claude, Codex, GitHub Copilot, and internal agents should be used to:
+- Link all outputs to a tracked work item.
+- Record assumptions and evidence for auditability.
+- Flag production-impacting or security-relevant scope for approval.
+- Do not move to DESIGN until scope and acceptance criteria are reviewable.
 
-1. Summarize context from issues, pull requests, logs, docs, and previous decisions.
-2. Generate structured drafts that are easy for humans to review.
-3. Identify missing requirements, risks, edge cases, and dependencies.
-4. Produce implementation, testing, security, or operational recommendations.
-5. Create pull requests only when the scope is clear and policy allows it.
-6. Record assumptions and evidence for auditability.
+## Validation And Exit Criteria
 
-## Recommended Agent Responsibilities
+- Required planning artifacts are complete.
+- Risks and dependencies are documented.
+- Acceptance criteria are testable.
+- Handoff to DESIGN is explicit.
 
-| Agent Type | Responsibility |
-|---|---|
-| Claude | Reasoning, analysis, documentation, trade-off review |
-| Codex | Implementation, refactoring, test generation, CI fixes |
-| GitHub Copilot | IDE assistance, PR assistance, repository-native suggestions |
-| Internal Agent | Organization-specific automation and tool integration |
+## Handoff
 
-## Required Controls
-
-- All changes must be linked to an issue, PR, workflow run, or incident record.
-- Production-impacting changes require approval gates.
-- Security and compliance exceptions must be documented.
-- Generated outputs must be reviewed for correctness and completeness.
-
-## Example Prompt
-
-```text
-You are the PLAN phase AI agent.
-
-Context:
-- Repository: <repo>
-- Work item: <issue or ticket>
-- Relevant docs: <links or excerpts>
-- Constraints: <security, compliance, deadlines, compatibility>
-
-Task:
-Analyze the current PLAN phase work and produce:
-1. Summary of current state
-2. Recommended next steps
-3. Risks and missing information
-4. Artifacts to create or update
-5. Validation checklist
-6. Human approval points
-
-Output as structured Markdown.
-```
-
-## Exit Criteria
-
-- Required artifacts are complete.
-- Quality gates for this phase are satisfied.
-- Risks are documented or accepted.
-- Handoff to the next phase is clear.
+- Provide architecture concerns, constraints, dependencies, and unresolved questions to DESIGN.

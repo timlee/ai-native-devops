@@ -7,6 +7,13 @@
 - [ ] Required inputs are available.
 - [ ] Dependencies are identified.
 
+## Required Inputs
+
+- [ ] docs/lifecycle/02-design.md reviewed.
+- [ ] docs/prompts/02-design.md reviewed.
+- [ ] docs/agents/architecture-agent.md reviewed.
+- [ ] Planning outputs are available.
+
 ## Execution Checklist
 
 - [ ] Architecture design
@@ -24,6 +31,13 @@
 - [ ] Data model
 - [ ] Threat model
 
+## Required Output Files
+
+- [ ] docs/architecture/design-draft.md updated.
+- [ ] docs/adr/ADR-0001-design-decision.md updated.
+- [ ] docs/api/openapi.yaml updated.
+- [ ] docs/security/threat-model.md updated.
+
 ## AI Usage Checklist
 
 - [ ] AI context is limited to necessary information.
@@ -38,3 +52,7 @@
 - [ ] Quality gates passed.
 - [ ] Risks are documented.
 - [ ] Handoff is ready.
+
+## Handoff
+
+- [ ] Implementation boundaries and unresolved risks are captured for CODE.

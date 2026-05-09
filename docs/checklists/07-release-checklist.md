@@ -7,6 +7,13 @@
 - [ ] Required inputs are available.
 - [ ] Dependencies are identified.
 
+## Required Inputs
+
+- [ ] docs/lifecycle/07-release.md reviewed.
+- [ ] docs/prompts/07-release.md reviewed.
+- [ ] docs/agents/release-agent.md reviewed.
+- [ ] Test and security outputs are available.
+
 ## Execution Checklist
 
 - [ ] Versioning
@@ -23,6 +30,11 @@
 - [ ] Release notes
 - [ ] Approval record
 
+## Required Output Files
+
+- [ ] docs/workflows/release.md updated.
+- [ ] docs/lifecycle/07-release.md updated.
+
 ## AI Usage Checklist
 
 - [ ] AI context is limited to necessary information.
@@ -37,3 +49,7 @@
 - [ ] Quality gates passed.
 - [ ] Risks are documented.
 - [ ] Handoff is ready.
+
+## Handoff
+
+- [ ] Deployment readiness, approvals, and rollback expectations are captured for DEPLOY.

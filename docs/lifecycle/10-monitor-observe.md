@@ -1,80 +1,61 @@
-# MONITOR / OBSERVE Phase Guidelines
+# 10 MONITOR / OBSERVE Lifecycle Guide
 
-![MONITOR / OBSERVE Phase](../assets/images/monitor-observe-phase.png)
+## Phase Objective
 
-## Objective
+Correlate telemetry, identify anomalies quickly, and prepare incident-ready monitoring context and ownership clues.
 
-The MONITOR / OBSERVE phase uses AI agents and deterministic DevOps tooling to improve speed, quality, reliability, and traceability.
+## Repository Directories
+
+- docs/lifecycle
+- docs/prompts
+- docs/checklists
+- docs/agents
+- docs/workflows
+- docs/operations
+- .github/workflows
+
+## Mandatory Input Files
+
+- docs/lifecycle/10-monitor-observe.md
+- docs/prompts/10-monitor-observe.md
+- docs/checklists/10-monitor-observe-checklist.md
+- docs/agents/observability-agent.md
+- docs/workflows/incident-response.md
+
+## Required Output Files
+
+- docs/lifecycle/10-monitor-observe.md
+- docs/workflows/incident-response.md
 
 ## Core Activities
 
-- Telemetry collection
-- Dashboard creation
+- Metrics review
+- Logs and traces correlation
 - Alert tuning
 - SLO tracking
-- Anomaly correlation
+- Anomaly detection
 
-## Key Artifacts and Work Products
+## AI And Automation Expectations
 
-- Dashboards
-- Alert rules
-- SLO reports
-- Anomaly log
-- Monitoring summary
+- Correlate alerts, metrics, logs, traces, and recent changes.
+- Identify likely causes, blast radius, and owner candidates.
+- Draft incident-ready summaries and escalation steps.
+- Update monitoring guidance artifacts.
 
-## How AI Supports This Phase
+## Controls And Approval Gates
 
-AI tools such as Claude, Codex, GitHub Copilot, and internal agents should be used to:
+- Preserve observability evidence and timestamps.
+- Avoid speculative conclusions without noting confidence.
+- Escalate sustained reliability or customer-impacting events.
+- Keep monitoring recommendations auditable.
 
-1. Summarize context from issues, pull requests, logs, docs, and previous decisions.
-2. Generate structured drafts that are easy for humans to review.
-3. Identify missing requirements, risks, edge cases, and dependencies.
-4. Produce implementation, testing, security, or operational recommendations.
-5. Create pull requests only when the scope is clear and policy allows it.
-6. Record assumptions and evidence for auditability.
+## Validation And Exit Criteria
 
-## Recommended Agent Responsibilities
+- Correlation findings are documented.
+- Escalation thresholds are clear.
+- Incident response guidance is current.
+- Handoff to INCIDENT / LEARN is clear when needed.
 
-| Agent Type | Responsibility |
-|---|---|
-| Claude | Reasoning, analysis, documentation, trade-off review |
-| Codex | Implementation, refactoring, test generation, CI fixes |
-| GitHub Copilot | IDE assistance, PR assistance, repository-native suggestions |
-| Internal Agent | Organization-specific automation and tool integration |
+## Handoff
 
-## Required Controls
-
-- All changes must be linked to an issue, PR, workflow run, or incident record.
-- Production-impacting changes require approval gates.
-- Security and compliance exceptions must be documented.
-- Generated outputs must be reviewed for correctness and completeness.
-
-## Example Prompt
-
-```text
-You are the MONITOR / OBSERVE phase AI agent.
-
-Context:
-- Repository: <repo>
-- Work item: <issue or ticket>
-- Relevant docs: <links or excerpts>
-- Constraints: <security, compliance, deadlines, compatibility>
-
-Task:
-Analyze the current MONITOR / OBSERVE phase work and produce:
-1. Summary of current state
-2. Recommended next steps
-3. Risks and missing information
-4. Artifacts to create or update
-5. Validation checklist
-6. Human approval points
-
-Output as structured Markdown.
-```
-
-## Exit Criteria
-
-- Required artifacts are complete.
-- Quality gates for this phase are satisfied.
-- Risks are documented or accepted.
-- Handoff to the next phase is clear.
+- Provide anomaly summary, likely causes, and evidence to INCIDENT / LEARN when escalation is required.

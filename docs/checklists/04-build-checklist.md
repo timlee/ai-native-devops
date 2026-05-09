@@ -7,6 +7,13 @@
 - [ ] Required inputs are available.
 - [ ] Dependencies are identified.
 
+## Required Inputs
+
+- [ ] docs/lifecycle/04-build.md reviewed.
+- [ ] docs/prompts/04-build.md reviewed.
+- [ ] docs/agents/build-agent.md reviewed.
+- [ ] Relevant workflow logs are available.
+
 ## Execution Checklist
 
 - [ ] Dependency resolution
@@ -23,6 +30,11 @@
 - [ ] Container images
 - [ ] SBOM
 
+## Required Output Files
+
+- [ ] docs/workflows/ci.md updated if build process changed.
+- [ ] docs/workflows/security.md updated if build security expectations changed.
+
 ## AI Usage Checklist
 
 - [ ] AI context is limited to necessary information.
@@ -37,3 +49,7 @@
 - [ ] Quality gates passed.
 - [ ] Risks are documented.
 - [ ] Handoff is ready.
+
+## Handoff
+
+- [ ] Build evidence and failures are captured for TEST and SECURE / COMPLY.

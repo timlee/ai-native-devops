@@ -1,5 +1,11 @@
 import { Phase } from "./phases";
 
+export interface AutomationRequirements {
+  repositoryDirectories: string[];
+  mandatoryInputFiles: string[];
+  requiredOutputFiles: string[];
+}
+
 export interface AgentTrigger {
   id: string;
   label: string;
@@ -350,11 +356,20 @@ export function buildAutomationPrompt(
   phase: Phase,
   spec: AgentAutomationSpec,
   trigger: AgentTrigger,
-  requestContext: string
+  requestContext: string,
+  requirements?: AutomationRequirements
 ): string {
   const flow = spec.automatedFlow.map((step, i) => `${i + 1}. ${step}`).join("\n");
   const outputs = spec.outputs.map((item) => `- ${item}`).join("\n");
-  const artifacts = spec.artifactPaths.map((item) => `- ${item}`).join("\n");
+  const repositoryDirectories = requirements?.repositoryDirectories?.length
+    ? requirements.repositoryDirectories.map((item) => `- ${item}`).join("\n")
+    : "- Refer to the phase documentation in docs/lifecycle and docs/prompts.";
+  const mandatoryInputs = requirements?.mandatoryInputFiles?.length
+    ? requirements.mandatoryInputFiles.map((item) => `- ${item}`).join("\n")
+    : `- ${phase.lifecycleFile}\n- ${phase.promptFile}\n- ${phase.checklistFile}\n- ${phase.agentFile}`;
+  const artifacts = requirements?.requiredOutputFiles?.length
+    ? requirements.requiredOutputFiles.map((item) => `- ${item}`).join("\n")
+    : spec.artifactPaths.map((item) => `- ${item}`).join("\n");
   const policy = spec.decisionPolicy
     ? `\nAutomation Policy:\n${spec.decisionPolicy.map((p) => `- ${p}`).join("\n")}`
     : "";
@@ -367,6 +382,12 @@ export function buildAutomationPrompt(
     "",
     "Request Context:",
     requestContext,
+    "",
+    "Repository Directories:",
+    repositoryDirectories,
+    "",
+    "Mandatory Input Files:",
+    mandatoryInputs,
     "",
     "Execute this automation workflow:",
     flow,

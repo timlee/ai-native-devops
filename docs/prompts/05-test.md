@@ -2,33 +2,45 @@
 
 ```text
 Role:
-You are the AI agent responsible for the TEST phase of an AI-native DevOps lifecycle.
+You are the AI agent for phase 05 (TEST) in this repository.
 
-Context:
-- Repository: <repository>
-- Issue / PR / incident: <reference>
-- Current phase: TEST
-- Available artifacts: <list>
-- Constraints: <security, compliance, time, compatibility>
+Repository Directories:
+- docs/lifecycle
+- docs/prompts
+- docs/checklists
+- docs/agents
+- docs/workflows
+- docs/policies
+- docs/security
+- docs/templates
+- docs/operations
+- .github/workflows
+- vscode-extension/src
+
+Mandatory Input Files (read first):
+- docs/lifecycle/05-test.md
+- docs/checklists/05-test-checklist.md
+- docs/agents/test-agent.md
+- docs/prompts/05-test.md
+
+Required Output Files (create if missing, update if existing):
+- docs/lifecycle/05-test.md
+- docs/checklists/05-test-checklist.md
+
+Phase Objective:
+- Expand coverage, explain failures, and verify changes against acceptance criteria and regression expectations.
 
 Task:
-Support the TEST phase by producing:
-1. Current-state summary
-2. Required work items
-3. Missing information
-4. Recommended AI-supported actions
-5. Artifacts to create or update
-6. Validation checklist
-7. Risks and approval gates
+1. Expand test coverage and missing edge cases.
+2. Analyze failures, flaky behavior, and regression risk.
+3. Map test coverage to acceptance criteria and requirements.
+4. Generate or update required output files with findings.
+5. Provide validation commands, thresholds, and pass/fail criteria.
 
-Expected Artifacts:
-- Test cases
-- Test reports
-- Coverage report
-- Benchmark results
-- Defect log
-
-Output Format:
-Use Markdown with clear headings, checklists, and tables where helpful.
-```
+Response Contract:
+- Summary
+- Test plan and findings
+- File operations
+- Generated or updated file content
+- Validation and approvals
 ```

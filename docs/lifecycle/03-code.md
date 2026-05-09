@@ -1,80 +1,62 @@
-# CODE Phase Guidelines
+# 03 CODE Lifecycle Guide
 
-![CODE Phase](../assets/images/code-phase.png)
+## Phase Objective
 
-## Objective
+Implement approved scope with tests and a review-ready change package that satisfies repository governance and traceability requirements.
 
-The CODE phase uses AI agents and deterministic DevOps tooling to improve speed, quality, reliability, and traceability.
+## Repository Directories
+
+- docs/lifecycle
+- docs/prompts
+- docs/checklists
+- docs/agents
+- docs/workflows
+- .github
+- .github/workflows
+- vscode-extension/src
+
+## Mandatory Input Files
+
+- docs/lifecycle/03-code.md
+- docs/prompts/03-code.md
+- docs/checklists/03-code-checklist.md
+- docs/agents/coding-agent.md
+- AGENTS.md
+
+## Required Output Files
+
+- .github/pull_request_template.md
+- docs/workflows/ai-code-pr.md
 
 ## Core Activities
 
 - Implementation
 - Refactoring
-- Bug fixing
-- Unit test creation
-- Pull request creation
+- Unit testing
+- Code review preparation
+- PR authoring
 
-## Key Artifacts and Work Products
+## AI And Automation Expectations
 
-- Source code
-- Unit tests
-- Commits
-- Pull request
-- Developer notes
+- Build an implementation plan from approved design.
+- Propose code, tests, and config changes with minimal unrelated churn.
+- Produce a review-ready PR package with governance sections.
+- Record validation commands and rollback implications.
 
-## How AI Supports This Phase
+## Controls And Approval Gates
 
-AI tools such as Claude, Codex, GitHub Copilot, and internal agents should be used to:
+- Keep changes linked to tracked work.
+- Preserve repository conventions and security controls.
+- Do not weaken testing or approval gates.
+- Require human review before merge.
 
-1. Summarize context from issues, pull requests, logs, docs, and previous decisions.
-2. Generate structured drafts that are easy for humans to review.
-3. Identify missing requirements, risks, edge cases, and dependencies.
-4. Produce implementation, testing, security, or operational recommendations.
-5. Create pull requests only when the scope is clear and policy allows it.
-6. Record assumptions and evidence for auditability.
+## Validation And Exit Criteria
 
-## Recommended Agent Responsibilities
+- Implementation is complete for scoped work.
+- Tests for changed behavior exist or are updated.
+- PR package is review-ready.
+- Handoff to BUILD or TEST is clear.
 
-| Agent Type | Responsibility |
-|---|---|
-| Claude | Reasoning, analysis, documentation, trade-off review |
-| Codex | Implementation, refactoring, test generation, CI fixes |
-| GitHub Copilot | IDE assistance, PR assistance, repository-native suggestions |
-| Internal Agent | Organization-specific automation and tool integration |
+## Handoff
 
-## Required Controls
-
-- All changes must be linked to an issue, PR, workflow run, or incident record.
-- Production-impacting changes require approval gates.
-- Security and compliance exceptions must be documented.
-- Generated outputs must be reviewed for correctness and completeness.
-
-## Example Prompt
-
-```text
-You are the CODE phase AI agent.
-
-Context:
-- Repository: <repo>
-- Work item: <issue or ticket>
-- Relevant docs: <links or excerpts>
-- Constraints: <security, compliance, deadlines, compatibility>
-
-Task:
-Analyze the current CODE phase work and produce:
-1. Summary of current state
-2. Recommended next steps
-3. Risks and missing information
-4. Artifacts to create or update
-5. Validation checklist
-6. Human approval points
-
-Output as structured Markdown.
-```
-
-## Exit Criteria
-
-- Required artifacts are complete.
-- Quality gates for this phase are satisfied.
-- Risks are documented or accepted.
-- Handoff to the next phase is clear.
+- Provide changed files, validation evidence, known risks, and rollback notes to BUILD and TEST.

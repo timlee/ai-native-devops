@@ -1,80 +1,61 @@
-# BUILD Phase Guidelines
+# 04 BUILD Lifecycle Guide
 
-![BUILD Phase](../assets/images/build-phase.png)
+## Phase Objective
 
-## Objective
+Diagnose build and packaging issues, maintain reliable pipeline behavior, and document supply-chain and artifact expectations.
 
-The BUILD phase uses AI agents and deterministic DevOps tooling to improve speed, quality, reliability, and traceability.
+## Repository Directories
+
+- docs/lifecycle
+- docs/prompts
+- docs/checklists
+- docs/agents
+- docs/workflows
+- .github/workflows
+- vscode-extension
+
+## Mandatory Input Files
+
+- docs/lifecycle/04-build.md
+- docs/prompts/04-build.md
+- docs/checklists/04-build-checklist.md
+- docs/agents/build-agent.md
+- .github/workflows/ci.yml
+
+## Required Output Files
+
+- docs/workflows/ci.md
+- docs/workflows/security.md
 
 ## Core Activities
 
-- Dependency resolution
-- Compilation
+- Build execution
 - Packaging
-- Container image creation
-- SBOM generation
+- Dependency resolution
+- Container build or artifact assembly
+- Artifact provenance and SBOM expectations
 
-## Key Artifacts and Work Products
+## AI And Automation Expectations
 
-- Build logs
-- Binaries
-- Packages
-- Container images
-- SBOM
+- Analyze build failures and probable root causes.
+- Recommend workflow, dependency, or packaging fixes.
+- Document SBOM and provenance guidance.
+- Produce rerun steps and validation recommendations.
 
-## How AI Supports This Phase
+## Controls And Approval Gates
 
-AI tools such as Claude, Codex, GitHub Copilot, and internal agents should be used to:
+- Keep workflow changes auditable.
+- Preserve security and branch protection rules.
+- Document any supply-chain risk introduced by fixes.
+- Require review for pipeline changes affecting release readiness.
 
-1. Summarize context from issues, pull requests, logs, docs, and previous decisions.
-2. Generate structured drafts that are easy for humans to review.
-3. Identify missing requirements, risks, edge cases, and dependencies.
-4. Produce implementation, testing, security, or operational recommendations.
-5. Create pull requests only when the scope is clear and policy allows it.
-6. Record assumptions and evidence for auditability.
+## Validation And Exit Criteria
 
-## Recommended Agent Responsibilities
+- Build path is reproducible.
+- Required workflow guidance is documented.
+- Artifact integrity expectations are captured.
+- Handoff to TEST or SECURE / COMPLY is explicit.
 
-| Agent Type | Responsibility |
-|---|---|
-| Claude | Reasoning, analysis, documentation, trade-off review |
-| Codex | Implementation, refactoring, test generation, CI fixes |
-| GitHub Copilot | IDE assistance, PR assistance, repository-native suggestions |
-| Internal Agent | Organization-specific automation and tool integration |
+## Handoff
 
-## Required Controls
-
-- All changes must be linked to an issue, PR, workflow run, or incident record.
-- Production-impacting changes require approval gates.
-- Security and compliance exceptions must be documented.
-- Generated outputs must be reviewed for correctness and completeness.
-
-## Example Prompt
-
-```text
-You are the BUILD phase AI agent.
-
-Context:
-- Repository: <repo>
-- Work item: <issue or ticket>
-- Relevant docs: <links or excerpts>
-- Constraints: <security, compliance, deadlines, compatibility>
-
-Task:
-Analyze the current BUILD phase work and produce:
-1. Summary of current state
-2. Recommended next steps
-3. Risks and missing information
-4. Artifacts to create or update
-5. Validation checklist
-6. Human approval points
-
-Output as structured Markdown.
-```
-
-## Exit Criteria
-
-- Required artifacts are complete.
-- Quality gates for this phase are satisfied.
-- Risks are documented or accepted.
-- Handoff to the next phase is clear.
+- Provide build evidence, failure analysis, and remaining risks to TEST and SECURE / COMPLY.

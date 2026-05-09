@@ -7,6 +7,13 @@
 - [ ] Required inputs are available.
 - [ ] Dependencies are identified.
 
+## Required Inputs
+
+- [ ] docs/lifecycle/01-plan.md reviewed.
+- [ ] docs/prompts/01-plan.md reviewed.
+- [ ] docs/agents/planning-agent.md reviewed.
+- [ ] Constraints and assumptions collected.
+
 ## Execution Checklist
 
 - [ ] Requirement analysis
@@ -23,6 +30,11 @@
 - [ ] Acceptance criteria
 - [ ] Planning notes
 
+## Required Output Files
+
+- [ ] docs/lifecycle/01-plan.md updated.
+- [ ] docs/prompts/01-plan.md updated if prompt guidance changed.
+
 ## AI Usage Checklist
 
 - [ ] AI context is limited to necessary information.
@@ -37,3 +49,7 @@
 - [ ] Quality gates passed.
 - [ ] Risks are documented.
 - [ ] Handoff is ready.
+
+## Handoff
+
+- [ ] Design constraints and open questions are captured for DESIGN.

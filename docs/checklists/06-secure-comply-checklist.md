@@ -7,6 +7,13 @@
 - [ ] Required inputs are available.
 - [ ] Dependencies are identified.
 
+## Required Inputs
+
+- [ ] docs/lifecycle/06-secure-comply.md reviewed.
+- [ ] docs/prompts/06-secure-comply.md reviewed.
+- [ ] docs/agents/security-agent.md reviewed.
+- [ ] Scan results and policy findings are available.
+
 ## Execution Checklist
 
 - [ ] SAST and DAST analysis
@@ -23,6 +30,12 @@
 - [ ] Exception records
 - [ ] Security sign-off
 
+## Required Output Files
+
+- [ ] docs/policies/security-gates.md updated.
+- [ ] docs/policies/secrets-management.md updated.
+- [ ] docs/security/security-model.md updated.
+
 ## AI Usage Checklist
 
 - [ ] AI context is limited to necessary information.
@@ -37,3 +50,7 @@
 - [ ] Quality gates passed.
 - [ ] Risks are documented.
 - [ ] Handoff is ready.
+
+## Handoff
+
+- [ ] Blocking findings and approval state are captured for RELEASE.

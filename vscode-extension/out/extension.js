@@ -186,9 +186,13 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, phasePanel_2.resolveRepoRoot)(context);
+        const requirements = (0, phasePanel_2.readPhaseRequirements)(repoRoot, selected.phase);
+        const artifactPaths = requirements.requiredOutputFiles.length > 0
+            ? requirements.requiredOutputFiles
+            : spec.artifactPaths;
         const created = [];
         const now = new Date().toISOString();
-        for (const relativePath of spec.artifactPaths) {
+        for (const relativePath of artifactPaths) {
             const content = [
                 `# ${spec.agentName} Artifact`,
                 "",
@@ -391,7 +395,9 @@ async function runAgentAutomationInteractive(context, aiRunner) {
     });
     if (!requestContext)
         return;
-    const prompt = (0, agentAutomation_1.buildAutomationPrompt)(selected.phase, spec, trigger, requestContext);
+    const repoRoot = (0, phasePanel_2.resolveRepoRoot)(context);
+    const requirements = (0, phasePanel_2.readPhaseRequirements)(repoRoot, selected.phase);
+    const prompt = (0, agentAutomation_1.buildAutomationPrompt)(selected.phase, spec, trigger, requestContext, requirements);
     const panel = phasePanel_1.PhasePanel.show(selected.phase, context, (ph, pr, pnl) => aiRunner.run(ph, pr ?? "", pnl));
     await aiRunner.run(selected.phase, prompt, panel);
 }
@@ -416,7 +422,8 @@ async function processWebhookQueue(context, aiRunner, output) {
             continue;
         }
         const trigger = (0, webhookQueue_1.resolveTrigger)(resolved.spec, event.triggerId);
-        const prompt = (0, agentAutomation_1.buildAutomationPrompt)(resolved.phase, resolved.spec, trigger, (0, webhookQueue_1.buildQueueContext)(event));
+        const requirements = (0, phasePanel_2.readPhaseRequirements)(repoRoot, resolved.phase);
+        const prompt = (0, agentAutomation_1.buildAutomationPrompt)(resolved.phase, resolved.spec, trigger, (0, webhookQueue_1.buildQueueContext)(event), requirements);
         output.appendLine(`Running ${resolved.spec.agentName} for phase ${resolved.phase.label} via trigger ${trigger.id}`);
         if (autoOpenPanel) {
             const panel = phasePanel_1.PhasePanel.show(resolved.phase, context, (ph, pr, pnl) => aiRunner.run(ph, pr ?? "", pnl));

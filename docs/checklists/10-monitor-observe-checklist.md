@@ -7,6 +7,13 @@
 - [ ] Required inputs are available.
 - [ ] Dependencies are identified.
 
+## Required Inputs
+
+- [ ] docs/lifecycle/10-monitor-observe.md reviewed.
+- [ ] docs/prompts/10-monitor-observe.md reviewed.
+- [ ] docs/agents/observability-agent.md reviewed.
+- [ ] Recent telemetry and change context are available.
+
 ## Execution Checklist
 
 - [ ] Telemetry collection
@@ -23,6 +30,11 @@
 - [ ] Anomaly log
 - [ ] Monitoring summary
 
+## Required Output Files
+
+- [ ] docs/lifecycle/10-monitor-observe.md updated.
+- [ ] docs/workflows/incident-response.md updated if escalation flow changed.
+
 ## AI Usage Checklist
 
 - [ ] AI context is limited to necessary information.
@@ -37,3 +49,7 @@
 - [ ] Quality gates passed.
 - [ ] Risks are documented.
 - [ ] Handoff is ready.
+
+## Handoff
+
+- [ ] Incident escalation package is ready for INCIDENT / LEARN when needed.

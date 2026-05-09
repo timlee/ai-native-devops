@@ -3,6 +3,18 @@ import * as fs from "fs";
 import * as path from "path";
 import { Phase } from "./phases";
 
+export interface PhaseRequirements {
+  repositoryDirectories: string[];
+  mandatoryInputFiles: string[];
+  requiredOutputFiles: string[];
+}
+
+interface RequirementRenderOptions {
+  repoRoot: string;
+  entryKind: "directory" | "file";
+  allowCreate: boolean;
+}
+
 /** Resolve the root of the ai-native-devops docs folder */
 export function resolveRepoRoot(context: vscode.ExtensionContext): string {
   const configured = vscode.workspace
@@ -30,6 +42,78 @@ export function readPhaseFile(
     return null;
   }
   return fs.readFileSync(full, "utf8");
+}
+
+function normalizeSectionName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[#:]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function parseListSections(content: string): Map<string, string[]> {
+  const sections = new Map<string, string[]>();
+  let currentSection: string | undefined;
+
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line === "```text" || line === "```") {
+      continue;
+    }
+
+    const markdownHeading = line.match(/^##\s+(.+)$/);
+    const labelHeading = line.match(/^([A-Za-z/&\- ]+):$/);
+    if (markdownHeading || labelHeading) {
+      currentSection = normalizeSectionName(
+        markdownHeading?.[1] ?? labelHeading?.[1] ?? ""
+      );
+      if (!sections.has(currentSection)) {
+        sections.set(currentSection, []);
+      }
+      continue;
+    }
+
+    const bullet = line.match(/^-\s+(.+)$/);
+    if (bullet && currentSection) {
+      sections.get(currentSection)?.push(bullet[1].trim());
+    }
+  }
+
+  return sections;
+}
+
+function unique(items: string[]): string[] {
+  return Array.from(new Set(items));
+}
+
+export function readPhaseRequirements(
+  repoRoot: string,
+  phase: Phase
+): PhaseRequirements {
+  const lifecycleContent = readPhaseFile(repoRoot, phase.lifecycleFile) ?? "";
+  const promptContent = readPhaseFile(repoRoot, phase.promptFile) ?? "";
+  const lifecycleSections = parseListSections(lifecycleContent);
+  const promptSections = parseListSections(promptContent);
+
+  const directories = unique([
+    ...(promptSections.get("repository directories") ?? []),
+    ...(lifecycleSections.get("repository directories") ?? []),
+  ]);
+  const mandatoryInputFiles = unique([
+    ...(promptSections.get("mandatory input files") ?? []),
+    ...(lifecycleSections.get("mandatory input files") ?? []),
+  ]);
+  const requiredOutputFiles = unique([
+    ...(promptSections.get("required output files") ?? []),
+    ...(lifecycleSections.get("required output files") ?? []),
+  ]);
+
+  return {
+    repositoryDirectories: directories,
+    mandatoryInputFiles,
+    requiredOutputFiles,
+  };
 }
 
 export function ensureTextFile(repoRoot: string, relativePath: string, content: string): string {
@@ -134,6 +218,61 @@ function inlineHtml(text: string): string {
   return text;
 }
 
+function renderRequirementList(
+  title: string,
+  items: string[],
+  options: RequirementRenderOptions
+): string {
+  if (items.length === 0) {
+    return "";
+  }
+  const list = items.map((item) => {
+    const fullPath = path.join(options.repoRoot, item);
+    const exists = fs.existsSync(fullPath);
+    const actionLabel = exists ? "Open" : options.allowCreate ? "Create" : "Missing";
+    const disabled = exists || options.allowCreate ? "" : " disabled";
+    return [
+      '<li class="requirement-item">',
+      `<code>${escapeHtml(item)}</code>`,
+      `<button class="path-action" data-path="${escapeHtml(item)}" data-kind="${options.entryKind}" data-create="${options.allowCreate ? "true" : "false"}"${disabled}>${actionLabel}</button>`,
+      "</li>",
+    ].join("");
+  }).join("");
+  return [
+    '<section class="requirement-card">',
+    `<h3>${escapeHtml(title)}</h3>`,
+    `<ul>${list}</ul>`,
+    "</section>",
+  ].join("");
+}
+
+function renderRequirementsSummary(
+  repoRoot: string,
+  requirements: PhaseRequirements
+): string {
+  return [
+    '<section class="requirements-summary">',
+    '<h2>Repository Requirements</h2>',
+    '<p>Read these files first and write outputs to these repository targets.</p>',
+    renderRequirementList("Repository Directories", requirements.repositoryDirectories, {
+      repoRoot,
+      entryKind: "directory",
+      allowCreate: false,
+    }),
+    renderRequirementList("Mandatory Input Files", requirements.mandatoryInputFiles, {
+      repoRoot,
+      entryKind: "file",
+      allowCreate: false,
+    }),
+    renderRequirementList("Required Output Files", requirements.requiredOutputFiles, {
+      repoRoot,
+      entryKind: "file",
+      allowCreate: true,
+    }),
+    "</section>",
+  ].join("");
+}
+
 export class PhasePanel {
   static readonly viewType = "aiNativeDevOps.phasePanel";
   private static panels = new Map<number, PhasePanel>();
@@ -200,22 +339,70 @@ export class PhasePanel {
     );
   }
 
-  private _handleMessage(msg: { command: string; text?: string }) {
+  private async _handleMessage(msg: {
+    command: string;
+    text?: string;
+    relativePath?: string;
+    kind?: "directory" | "file";
+    createIfMissing?: boolean;
+  }) {
     switch (msg.command) {
       case "runPrompt":
-        this.aiRunner(this.phase, msg.text, this);
+        await this.aiRunner(this.phase, msg.text, this);
         break;
       case "openChecklist":
-        vscode.commands.executeCommand(
+        await vscode.commands.executeCommand(
           "aiNativeDevOps.openChecklist",
           this.phase
         );
         break;
       case "copyPrompt":
-        vscode.env.clipboard.writeText(msg.text ?? "");
+        await vscode.env.clipboard.writeText(msg.text ?? "");
         vscode.window.showInformationMessage("Prompt copied to clipboard.");
         break;
+      case "openPath":
+        await this._openRequirementPath(
+          msg.relativePath,
+          msg.kind,
+          msg.createIfMissing === true
+        );
+        break;
     }
+  }
+
+  private async _openRequirementPath(
+    relativePath: string | undefined,
+    kind: "directory" | "file" | undefined,
+    createIfMissing: boolean
+  ) {
+    if (!relativePath || !kind) {
+      return;
+    }
+
+    const repoRoot = resolveRepoRoot(this.context);
+    const fullPath = path.join(repoRoot, relativePath);
+
+    if (kind === "directory") {
+      if (!fs.existsSync(fullPath)) {
+        vscode.window.showWarningMessage(`Directory not found: ${relativePath}`);
+        return;
+      }
+      const uri = vscode.Uri.file(fullPath);
+      await vscode.commands.executeCommand("revealInExplorer", uri);
+      return;
+    }
+
+    let targetPath = fullPath;
+    if (!fs.existsSync(targetPath)) {
+      if (!createIfMissing) {
+        vscode.window.showWarningMessage(`File not found: ${relativePath}`);
+        return;
+      }
+      targetPath = ensureTextFile(repoRoot, relativePath, "");
+    }
+
+    const doc = await vscode.workspace.openTextDocument(targetPath);
+    await vscode.window.showTextDocument(doc, { preview: false });
   }
 
   /** Append streamed AI response text to the panel */
@@ -238,18 +425,27 @@ export class PhasePanel {
     const lifecycle = readPhaseFile(repoRoot, this.phase.lifecycleFile) ?? "_File not found._";
     const prompt = readPhaseFile(repoRoot, this.phase.promptFile) ?? "_File not found._";
     const agent = readPhaseFile(repoRoot, this.phase.agentFile) ?? "_File not found._";
+    const requirements = readPhaseRequirements(repoRoot, this.phase);
 
     const lifecycleHtml = mdToHtml(lifecycle);
     const promptHtml = mdToHtml(prompt);
     const agentHtml = mdToHtml(agent);
+    const requirementsHtml = renderRequirementsSummary(repoRoot, requirements);
 
-    this._panel.webview.html = this._buildHtml(lifecycleHtml, promptHtml, agentHtml, prompt);
+    this._panel.webview.html = this._buildHtml(
+      lifecycleHtml,
+      promptHtml,
+      agentHtml,
+      requirementsHtml,
+      prompt
+    );
   }
 
   private _buildHtml(
     lifecycleHtml: string,
     promptHtml: string,
     agentHtml: string,
+    requirementsHtml: string,
     rawPrompt: string
   ): string {
     const escapedPrompt = rawPrompt.replace(/`/g, "\\`").replace(/\$/g, "\\$");
@@ -291,6 +487,15 @@ export class PhasePanel {
   @keyframes spin { to { transform: rotate(360deg); } }
   .status-bar { font-size: 11px; color: var(--vscode-descriptionForeground); margin-top: 6px; height: 16px; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+  .requirements-summary { margin-bottom: 16px; padding: 14px 16px; border: 1px solid var(--vscode-panel-border); border-radius: 6px; background: var(--vscode-sideBar-background); }
+  .requirements-summary h2 { margin-top: 0; }
+  .requirement-card { margin-top: 14px; }
+  .requirement-card h3 { margin-bottom: 8px; }
+  .requirement-card ul { margin: 0; }
+  .requirement-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .path-action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+  .path-action:hover:enabled { background: var(--vscode-button-secondaryHoverBackground); }
+  .path-action:disabled { cursor: not-allowed; opacity: 0.6; }
 </style>
 </head>
 <body>
@@ -301,8 +506,9 @@ export class PhasePanel {
   <button class="tab" onclick="showTab('run')">▶ Run AI</button>
 </div>
 
-<div id="lifecycle" class="tab-content active">${lifecycleHtml}</div>
+<div id="lifecycle" class="tab-content active">${requirementsHtml}${lifecycleHtml}</div>
 <div id="prompt" class="tab-content">
+  ${requirementsHtml}
   ${promptHtml}
   <div class="btn-row">
     <button class="btn btn-secondary" onclick="copyDefaultPrompt()">📋 Copy Prompt</button>
@@ -356,6 +562,19 @@ export class PhasePanel {
   function openChecklist() {
     vscode.postMessage({ command: 'openChecklist' });
   }
+
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || !target.classList.contains('path-action')) {
+      return;
+    }
+    vscode.postMessage({
+      command: 'openPath',
+      relativePath: target.dataset.path,
+      kind: target.dataset.kind,
+      createIfMissing: target.dataset.create === 'true'
+    });
+  });
 
   window.addEventListener('message', event => {
     const msg = event.data;

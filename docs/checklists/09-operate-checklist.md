@@ -7,6 +7,13 @@
 - [ ] Required inputs are available.
 - [ ] Dependencies are identified.
 
+## Required Inputs
+
+- [ ] docs/lifecycle/09-operate.md reviewed.
+- [ ] docs/prompts/09-operate.md reviewed.
+- [ ] docs/agents/ops-agent.md reviewed.
+- [ ] docs/templates/runbook-template.md reviewed.
+
 ## Execution Checklist
 
 - [ ] Runbook execution
@@ -23,6 +30,11 @@
 - [ ] Capacity report
 - [ ] Maintenance record
 
+## Required Output Files
+
+- [ ] docs/templates/runbook-template.md updated if needed.
+- [ ] docs/lifecycle/09-operate.md updated.
+
 ## AI Usage Checklist
 
 - [ ] AI context is limited to necessary information.
@@ -37,3 +49,7 @@
 - [ ] Quality gates passed.
 - [ ] Risks are documented.
 - [ ] Handoff is ready.
+
+## Handoff
+
+- [ ] Observability watch items and current operational risks are captured for MONITOR / OBSERVE.
