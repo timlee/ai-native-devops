@@ -1,0 +1,13 @@
+site_name: AI-Native DevOps GitHub Guidelines
+site_description: GitHub repository guidelines for AI-native DevOps automation
+nav:
+  - Home: README.md
+  - Architecture:
+      - Overall: docs/architecture/overall-architecture.md
+      - Repository: docs/architecture/repository-architecture.md
+      - Maturity Model: docs/architecture/automation-maturity-model.md
+  - Lifecycle: docs/lifecycle/README.md
+  - Agents: docs/agents/README.md
+  - Policies: docs/policies/README.md
+  - Prompts: docs/prompts/README.md
+  - Checklists: docs/checklists/README.md
