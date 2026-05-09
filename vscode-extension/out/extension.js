@@ -507,7 +507,7 @@ async function scaffoldGithubWebhookWorkflows(context) {
         "",
         "on:",
         "  workflow_run:",
-        "    workflows: [\"CI\", \"Security Scan\"]",
+        "    workflows: [\"CI\", \"Security Checks\"]",
         "    types: [completed]",
         "  workflow_dispatch:",
         "",
