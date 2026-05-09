@@ -216,7 +216,7 @@ This creates a `.vsix` file in `vscode-extension/`.
 Anyone can install it with:
 
 ```bash
-code --install-extension ai-native-devops-0.1.3.vsix
+code --install-extension ai-native-devops-0.1.4.vsix
 ```
 
 or in VS Code:

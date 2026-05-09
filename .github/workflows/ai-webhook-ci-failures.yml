@@ -2,7 +2,7 @@ name: AI Webhook CI Failure Events
 
 on:
   workflow_run:
-    workflows: ["CI", "Security Scan"]
+    workflows: ["CI", "Security Checks"]
     types: [completed]
   workflow_dispatch:
 
@@ -41,21 +41,34 @@ jobs:
         env:
           WEBHOOK_URL: ${{ secrets.AI_DEVOPS_WEBHOOK_URL }}
           WEBHOOK_TOKEN: ${{ secrets.AI_DEVOPS_WEBHOOK_TOKEN }}
+          PHASE_KEY: ${{ steps.routing.outputs.phase }}
+          TRIGGER_ID: ${{ steps.routing.outputs.trigger }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          WORKFLOW_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_RUN_URL: ${{ github.event.workflow_run.html_url }}
         run: |
+          PAYLOAD=$(jq -n \
+            --arg source "github" \
+            --arg phaseKey "$PHASE_KEY" \
+            --arg triggerId "$TRIGGER_ID" \
+            --arg workflowName "$WORKFLOW_NAME" \
+            --arg conclusion "$WORKFLOW_CONCLUSION" \
+            --arg runId "$WORKFLOW_RUN_ID" \
+            --arg runUrl "$WORKFLOW_RUN_URL" \
+            '{
+              source: $source,
+              phaseKey: $phaseKey,
+              triggerId: $triggerId,
+              title: ("Workflow failed: " + $workflowName),
+              context: ("Conclusion: " + $conclusion),
+              metadata: {
+                workflowName: $workflowName,
+                runId: $runId,
+                runUrl: $runUrl
+              }
+            }')
           curl -fsS -X POST "$WEBHOOK_URL/github" \
             -H "Content-Type: application/json" \
             -H "x-ai-native-devops-token: $WEBHOOK_TOKEN" \
-            -d @- <<'JSON'
-          {
-            "source": "github",
-            "phaseKey": "${{ steps.routing.outputs.phase }}",
-            "triggerId": "${{ steps.routing.outputs.trigger }}",
-            "title": "Workflow failed: ${{ github.event.workflow_run.name }}",
-            "context": "Conclusion: ${{ github.event.workflow_run.conclusion }}",
-            "metadata": {
-              "workflowName": "${{ github.event.workflow_run.name }}",
-              "runId": "${{ github.event.workflow_run.id }}",
-              "runUrl": "${{ github.event.workflow_run.html_url }}"
-            }
-          }
-          JSON
+            --data-raw "$PAYLOAD"
