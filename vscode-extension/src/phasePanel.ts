@@ -29,6 +29,18 @@ export function readPhaseFile(
   return fs.readFileSync(full, "utf8");
 }
 
+export function ensureTextFile(repoRoot: string, relativePath: string, content: string): string {
+  const full = path.join(repoRoot, relativePath);
+  const dir = path.dirname(full);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  if (!fs.existsSync(full)) {
+    fs.writeFileSync(full, content, "utf8");
+  }
+  return full;
+}
+
 /** Escape HTML for safe injection into webview */
 function escapeHtml(str: string): string {
   return str

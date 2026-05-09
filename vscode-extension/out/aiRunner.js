@@ -41,31 +41,31 @@ class AiRunner {
     constructor(secrets) {
         this.secrets = secrets;
     }
-    async run(phase, userPrompt, panel) {
+    async run(phase, userPrompt, output) {
         const cfg = vscode.workspace.getConfiguration("aiNativeDevOps");
         const provider = cfg.get("provider", "copilot");
         try {
             switch (provider) {
                 case "claude":
-                    await this._runClaude(userPrompt, cfg, panel);
+                    await this._runClaude(userPrompt, cfg, output);
                     break;
                 case "openai":
-                    await this._runOpenAI(userPrompt, cfg, panel);
+                    await this._runOpenAI(userPrompt, cfg, output);
                     break;
                 case "copilot":
-                    await this._runCopilot(userPrompt, phase, panel);
+                    await this._runCopilot(userPrompt, phase, output);
                     break;
                 default:
-                    panel.aiError(`Unknown provider: ${provider}`);
+                    output.aiError(`Unknown provider: ${provider}`);
             }
         }
         catch (err) {
             const message = err instanceof Error ? err.message : String(err);
-            panel.aiError(message);
+            output.aiError(message);
         }
     }
     // ── Claude ───────────────────────────────────────────────────────────────
-    async _runClaude(prompt, cfg, panel) {
+    async _runClaude(prompt, cfg, output) {
         const apiKey = await this.secrets.get(SECRET_CLAUDE);
         if (!apiKey) {
             throw new Error("No Anthropic API key found. Run 'AI DevOps: Select AI Provider' to set it.");
@@ -91,13 +91,13 @@ class AiRunner {
         for await (const chunk of stream) {
             if (chunk.type === "content_block_delta" &&
                 chunk.delta.type === "text_delta") {
-                panel.appendAiChunk(chunk.delta.text);
+                output.appendAiChunk(chunk.delta.text);
             }
         }
-        panel.aiDone();
+        output.aiDone();
     }
     // ── OpenAI ───────────────────────────────────────────────────────────────
-    async _runOpenAI(prompt, cfg, panel) {
+    async _runOpenAI(prompt, cfg, output) {
         const apiKey = await this.secrets.get(SECRET_OPENAI);
         if (!apiKey) {
             throw new Error("No OpenAI API key found. Run 'AI DevOps: Select AI Provider' to set it.");
@@ -127,13 +127,13 @@ class AiRunner {
         for await (const chunk of stream) {
             const text = chunk.choices[0]?.delta?.content;
             if (text) {
-                panel.appendAiChunk(text);
+                output.appendAiChunk(text);
             }
         }
-        panel.aiDone();
+        output.aiDone();
     }
     // ── Copilot ──────────────────────────────────────────────────────────────
-    async _runCopilot(prompt, phase, panel) {
+    async _runCopilot(prompt, phase, output) {
         // Use VS Code's built-in Copilot language model API (1.90+).
         const models = await vscode.lm.selectChatModels({ vendor: "copilot" });
         if (!models || models.length === 0) {
@@ -148,9 +148,9 @@ class AiRunner {
         ];
         const response = await model.sendRequest(messages, {}, new vscode.CancellationTokenSource().token);
         for await (const chunk of response.text) {
-            panel.appendAiChunk(chunk);
+            output.appendAiChunk(chunk);
         }
-        panel.aiDone();
+        output.aiDone();
     }
     // ── Key management helpers ────────────────────────────────────────────────
     async setClaudeKey(key) {

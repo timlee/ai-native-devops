@@ -2,7 +2,7 @@
   "name": "ai-native-devops",
   "displayName": "AI-Native DevOps",
   "description": "Guide software development through the 11-phase AI-native DevOps lifecycle using Claude, Codex, or GitHub Copilot APIs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "ai-native-devops",
   "license": "MIT",
   "repository": {
@@ -83,6 +83,26 @@
         "command": "aiNativeDevOps.runCustomPrompt",
         "title": "Run Custom Prompt",
         "category": "AI DevOps"
+      },
+      {
+        "command": "aiNativeDevOps.runAgentAutomation",
+        "title": "Run Agent Automation Flow",
+        "category": "AI DevOps"
+      },
+      {
+        "command": "aiNativeDevOps.scaffoldAgentArtifacts",
+        "title": "Scaffold Agent Artifacts",
+        "category": "AI DevOps"
+      },
+      {
+        "command": "aiNativeDevOps.processWebhookQueue",
+        "title": "Process Webhook Queue",
+        "category": "AI DevOps"
+      },
+      {
+        "command": "aiNativeDevOps.generateCodePrTemplate",
+        "title": "Generate CODE Agent PR Draft",
+        "category": "AI DevOps"
       }
     ],
     "configuration": {
@@ -134,6 +154,27 @@
           "type": "string",
           "default": "",
           "description": "Path to the ai-native-devops repo containing docs/. Defaults to the first workspace folder."
+        },
+        "aiNativeDevOps.webhookQueueFile": {
+          "type": "string",
+          "default": ".ai-native-devops/events.jsonl",
+          "description": "JSONL queue file consumed by the extension webhook processor."
+        },
+        "aiNativeDevOps.enableWebhookPolling": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable periodic polling of webhook queue events on extension activation."
+        },
+        "aiNativeDevOps.webhookPollingSeconds": {
+          "type": "number",
+          "minimum": 10,
+          "default": 30,
+          "description": "Polling interval in seconds when webhook polling is enabled."
+        },
+        "aiNativeDevOps.autoOpenPanelOnWebhook": {
+          "type": "boolean",
+          "default": true,
+          "description": "If true, the phase panel is opened while processing webhook events."
         }
       }
     },
@@ -162,7 +203,8 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
-    "package": "npx @vscode/vsce package"
+    "package": "npx @vscode/vsce package",
+    "start:webhook-bridge": "node scripts/webhook-bridge.js"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

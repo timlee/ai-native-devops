@@ -1,6 +1,11 @@
 import * as vscode from "vscode";
 import { Phase } from "./phases";
-import { PhasePanel } from "./phasePanel";
+
+export interface AiOutputSink {
+  appendAiChunk(chunk: string): void;
+  aiDone(): void;
+  aiError(msg: string): void;
+}
 
 export type AiProvider = "claude" | "openai" | "copilot";
 
@@ -13,7 +18,7 @@ export class AiRunner {
   async run(
     phase: Phase,
     userPrompt: string,
-    panel: PhasePanel
+    output: AiOutputSink
   ): Promise<void> {
     const cfg = vscode.workspace.getConfiguration("aiNativeDevOps");
     const provider = cfg.get<AiProvider>("provider", "copilot");
@@ -21,20 +26,20 @@ export class AiRunner {
     try {
       switch (provider) {
         case "claude":
-          await this._runClaude(userPrompt, cfg, panel);
+          await this._runClaude(userPrompt, cfg, output);
           break;
         case "openai":
-          await this._runOpenAI(userPrompt, cfg, panel);
+          await this._runOpenAI(userPrompt, cfg, output);
           break;
         case "copilot":
-          await this._runCopilot(userPrompt, phase, panel);
+          await this._runCopilot(userPrompt, phase, output);
           break;
         default:
-          panel.aiError(`Unknown provider: ${provider}`);
+          output.aiError(`Unknown provider: ${provider}`);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      panel.aiError(message);
+      output.aiError(message);
     }
   }
 
@@ -43,7 +48,7 @@ export class AiRunner {
   private async _runClaude(
     prompt: string,
     cfg: vscode.WorkspaceConfiguration,
-    panel: PhasePanel
+    output: AiOutputSink
   ): Promise<void> {
     const apiKey = await this.secrets.get(SECRET_CLAUDE);
     if (!apiKey) {
@@ -80,10 +85,10 @@ export class AiRunner {
         chunk.type === "content_block_delta" &&
         chunk.delta.type === "text_delta"
       ) {
-        panel.appendAiChunk(chunk.delta.text);
+        output.appendAiChunk(chunk.delta.text);
       }
     }
-    panel.aiDone();
+    output.aiDone();
   }
 
   // ── OpenAI ───────────────────────────────────────────────────────────────
@@ -91,7 +96,7 @@ export class AiRunner {
   private async _runOpenAI(
     prompt: string,
     cfg: vscode.WorkspaceConfiguration,
-    panel: PhasePanel
+    output: AiOutputSink
   ): Promise<void> {
     const apiKey = await this.secrets.get(SECRET_OPENAI);
     if (!apiKey) {
@@ -130,10 +135,10 @@ export class AiRunner {
     for await (const chunk of stream) {
       const text = chunk.choices[0]?.delta?.content;
       if (text) {
-        panel.appendAiChunk(text);
+        output.appendAiChunk(text);
       }
     }
-    panel.aiDone();
+    output.aiDone();
   }
 
   // ── Copilot ──────────────────────────────────────────────────────────────
@@ -141,7 +146,7 @@ export class AiRunner {
   private async _runCopilot(
     prompt: string,
     phase: Phase,
-    panel: PhasePanel
+    output: AiOutputSink
   ): Promise<void> {
     // Use VS Code's built-in Copilot language model API (1.90+).
     const models = await vscode.lm.selectChatModels({ vendor: "copilot" });
@@ -168,9 +173,9 @@ export class AiRunner {
     );
 
     for await (const chunk of response.text) {
-      panel.appendAiChunk(chunk);
+      output.appendAiChunk(chunk);
     }
-    panel.aiDone();
+    output.aiDone();
   }
 
   // ── Key management helpers ────────────────────────────────────────────────

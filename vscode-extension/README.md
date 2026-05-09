@@ -12,6 +12,8 @@ A VS Code extension that guides software development through the **11-phase AI-n
 | **Phase Checklist** | Interactive checklist with progress bar for each phase's entry/exit criteria |
 | **Status Bar** | Shows current phase; click to open the dashboard |
 | **Secure Key Storage** | API keys stored in VS Code's encrypted secret storage — never in settings files |
+| **11 Agent Automation Flows** | Trigger-aware PLAN→INCIDENT workflows with required output sections |
+| **Artifact Scaffolding** | Creates expected docs/artifact files for each agent phase |
 
 ## Getting Started
 
@@ -64,6 +66,85 @@ Or configure `aiNativeDevOps.repoRoot` to point to your clone of the `ai-native-
 | `AI DevOps: Open AI DevOps Dashboard` | Open the dashboard for the current phase |
 | `AI DevOps: Select AI Provider` | Choose Claude / OpenAI / Copilot and store API keys |
 | `AI DevOps: Run Custom Prompt` | Pick any phase and enter a free-form prompt |
+| `AI DevOps: Run Agent Automation Flow` | Select phase + trigger and run the full automation prompt template |
+| `AI DevOps: Scaffold Agent Artifacts` | Create expected artifact files for selected phase |
+| `AI DevOps: Process Webhook Queue` | Consume queued GitHub/Jira/Slack/custom webhook events and run matching agent automation |
+| `AI DevOps: Generate CODE Agent PR Draft` | One-click PR body generator with required governance sections |
+
+## Full AI Automation Design (11 Agents)
+
+The extension now includes a complete trigger-driven automation profile for all lifecycle agents:
+
+1. PLAN agent
+2. DESIGN agent
+3. CODE agent
+4. BUILD agent
+5. TEST agent
+6. SECURE / COMPLY agent
+7. RELEASE agent
+8. DEPLOY agent
+9. OPERATE agent
+10. MONITOR / OBSERVE agent
+11. INCIDENT / LEARN agent
+
+Each agent run includes:
+
+- Trigger context selection
+- Structured automation steps
+- Required markdown output sections
+- Artifact path targets
+- Governance requirements (approval gates, risk, rollback)
+
+Security/compliance and operational policies are built into the generated prompts, including risk tier behavior for secure/comply, deployment gate guidance, and incident learning feedback loop expectations.
+
+## Webhook Integration (GitHub / Jira / Slack)
+
+The extension supports queued webhook automation events.
+
+### 1. Start webhook bridge
+
+```bash
+cd vscode-extension
+npm run start:webhook-bridge
+```
+
+Default endpoint:
+
+- `POST http://localhost:8787/github`
+- `POST http://localhost:8787/jira`
+- `POST http://localhost:8787/slack`
+- `POST http://localhost:8787/custom`
+
+The bridge writes events to `.ai-native-devops/events.jsonl` by default.
+
+### 2. Process events in VS Code
+
+- Run command: `AI DevOps: Process Webhook Queue`
+- Or enable polling with settings:
+	- `aiNativeDevOps.enableWebhookPolling = true`
+	- `aiNativeDevOps.webhookPollingSeconds = 30`
+
+### 3. Optional shared secret
+
+Set env var `WEBHOOK_TOKEN` before starting the bridge, then pass header:
+
+- `x-ai-native-devops-token: <token>`
+
+### 4. Example payload
+
+```json
+{
+	"source": "github",
+	"phaseKey": "plan",
+	"triggerId": "github-issue",
+	"title": "New feature request",
+	"context": "Need multi-tenant RBAC with audit logging",
+	"metadata": {
+		"issueNumber": 128,
+		"severity": "medium"
+	}
+}
+```
 
 ## The 11 Lifecycle Phases
 

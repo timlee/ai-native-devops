@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PhasePanel = void 0;
 exports.resolveRepoRoot = resolveRepoRoot;
 exports.readPhaseFile = readPhaseFile;
+exports.ensureTextFile = ensureTextFile;
 const vscode = __importStar(require("vscode"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
@@ -59,6 +60,17 @@ function readPhaseFile(repoRoot, relativePath) {
         return null;
     }
     return fs.readFileSync(full, "utf8");
+}
+function ensureTextFile(repoRoot, relativePath, content) {
+    const full = path.join(repoRoot, relativePath);
+    const dir = path.dirname(full);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(full)) {
+        fs.writeFileSync(full, content, "utf8");
+    }
+    return full;
 }
 /** Escape HTML for safe injection into webview */
 function escapeHtml(str) {
