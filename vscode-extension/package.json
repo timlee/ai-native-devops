@@ -1,0 +1,175 @@
+{
+  "name": "ai-native-devops",
+  "displayName": "AI-Native DevOps",
+  "description": "Guide software development through the 11-phase AI-native DevOps lifecycle using Claude, Codex, or GitHub Copilot APIs",
+  "version": "0.1.0",
+  "publisher": "ai-native-devops",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "devops",
+    "lifecycle",
+    "claude",
+    "codex",
+    "copilot",
+    "planning",
+    "checklist"
+  ],
+  "icon": "media/icon.png",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aiNativeDevOps",
+          "title": "AI-Native DevOps",
+          "icon": "media/sidebar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "aiNativeDevOps": [
+        {
+          "id": "aiNativeDevOps.lifecycle",
+          "name": "Lifecycle Phases",
+          "type": "tree"
+        },
+        {
+          "id": "aiNativeDevOps.checklist",
+          "name": "Phase Checklist",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "aiNativeDevOps.openPhase",
+        "title": "Open Phase Guide",
+        "category": "AI DevOps"
+      },
+      {
+        "command": "aiNativeDevOps.runPrompt",
+        "title": "Run AI Prompt for Phase",
+        "category": "AI DevOps"
+      },
+      {
+        "command": "aiNativeDevOps.openChecklist",
+        "title": "Open Phase Checklist",
+        "category": "AI DevOps"
+      },
+      {
+        "command": "aiNativeDevOps.openDashboard",
+        "title": "Open AI DevOps Dashboard",
+        "category": "AI DevOps"
+      },
+      {
+        "command": "aiNativeDevOps.selectProvider",
+        "title": "Select AI Provider",
+        "category": "AI DevOps"
+      },
+      {
+        "command": "aiNativeDevOps.runCustomPrompt",
+        "title": "Run Custom Prompt",
+        "category": "AI DevOps"
+      }
+    ],
+    "configuration": {
+      "title": "AI-Native DevOps",
+      "properties": {
+        "aiNativeDevOps.provider": {
+          "type": "string",
+          "enum": [
+            "claude",
+            "openai",
+            "copilot"
+          ],
+          "enumDescriptions": [
+            "Anthropic Claude (claude-3-5-sonnet-20241022)",
+            "OpenAI (GPT-4o / Codex)",
+            "GitHub Copilot (uses VS Code Copilot Chat API)"
+          ],
+          "default": "copilot",
+          "description": "AI provider to use for generating code and guidance"
+        },
+        "aiNativeDevOps.anthropicApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Anthropic API key for Claude. Store in VS Code secret storage instead — use the 'Select AI Provider' command."
+        },
+        "aiNativeDevOps.openaiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API key for GPT-4o/Codex. Store in VS Code secret storage instead — use the 'Select AI Provider' command."
+        },
+        "aiNativeDevOps.claudeModel": {
+          "type": "string",
+          "default": "claude-3-5-sonnet-20241022",
+          "description": "Claude model to use"
+        },
+        "aiNativeDevOps.openaiModel": {
+          "type": "string",
+          "default": "gpt-4o",
+          "description": "OpenAI model to use"
+        },
+        "aiNativeDevOps.currentPhase": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 11,
+          "default": 1,
+          "description": "Current active lifecycle phase (1-11)"
+        },
+        "aiNativeDevOps.repoRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the ai-native-devops repo containing docs/. Defaults to the first workspace folder."
+        }
+      }
+    },
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "aiNativeDevOps.openPhase",
+          "when": "view == aiNativeDevOps.lifecycle && viewItem == phase",
+          "group": "inline@1"
+        },
+        {
+          "command": "aiNativeDevOps.runPrompt",
+          "when": "view == aiNativeDevOps.lifecycle && viewItem == phase",
+          "group": "inline@2"
+        },
+        {
+          "command": "aiNativeDevOps.openChecklist",
+          "when": "view == aiNativeDevOps.lifecycle && viewItem == phase",
+          "group": "inline@3"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "openai": "^4.52.0"
+  }
+}
