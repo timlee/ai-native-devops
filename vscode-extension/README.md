@@ -32,7 +32,7 @@ npm run watch
 
 ### 3. Launch in development
 
-Press **F5** in VS Code (with the `vscode-extension` folder open) to open an Extension Development Host.
+Press **F5** in VS Code (from the repo root or the `vscode-extension` folder) to open an Extension Development Host.
 
 ### 4. Configure your AI provider
 
@@ -95,6 +95,45 @@ Or configure `aiNativeDevOps.repoRoot` to point to your clone of the `ai-native-
 - The extension never logs or transmits keys.
 - All AI responses are streamed only to the local webview panel.
 - No data is sent anywhere except the selected AI provider's API endpoint.
+
+## Install by Others (VSIX)
+
+Build a distributable package:
+
+```bash
+cd vscode-extension
+npm install
+npm run compile
+npm run package
+```
+
+This creates a `.vsix` file in `vscode-extension/`.
+
+Anyone can install it with:
+
+```bash
+code --install-extension ai-native-devops-0.1.0.vsix
+```
+
+or in VS Code:
+
+1. Open Extensions view.
+2. Click `...`.
+3. Select `Install from VSIX...`.
+4. Choose the generated `.vsix` file.
+
+## Publish to VS Code Marketplace
+
+To make installation one-click for all users:
+
+```bash
+cd vscode-extension
+npm install -g @vscode/vsce
+vsce login <publisher>
+vsce publish
+```
+
+After publishing, users can install from the Marketplace by searching the extension name.
 
 ## Packaging
 
