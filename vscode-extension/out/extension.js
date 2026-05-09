@@ -55,15 +55,15 @@ function activate(context) {
     // ── Commands ──────────────────────────────────────────────────────────────
     context.subscriptions.push(
     // Open phase lifecycle guide panel
-    vscode.commands.registerCommand("aiNativeDevOps.openPhase", (phase) => {
-        const p = phase ?? pickCurrentPhase();
+    vscode.commands.registerCommand("aiNativeDevOps.openPhase", (phaseArg) => {
+        const p = resolvePhaseArg(phaseArg) ?? pickCurrentPhase();
         if (!p)
             return;
         phasePanel_1.PhasePanel.show(p, context, (ph, prompt, panel) => aiRunner.run(ph, prompt ?? "", panel));
     }), 
     // Run AI prompt for a phase
-    vscode.commands.registerCommand("aiNativeDevOps.runPrompt", async (phase) => {
-        const p = phase ?? pickCurrentPhase();
+    vscode.commands.registerCommand("aiNativeDevOps.runPrompt", async (phaseArg) => {
+        const p = resolvePhaseArg(phaseArg) ?? pickCurrentPhase();
         if (!p)
             return;
         const input = await vscode.window.showInputBox({
@@ -77,8 +77,8 @@ function activate(context) {
         await aiRunner.run(p, input.trim() || `Follow the AI-native DevOps guidelines for phase: ${p.label}`, panel);
     }), 
     // Open checklist panel
-    vscode.commands.registerCommand("aiNativeDevOps.openChecklist", (phase) => {
-        const p = phase ?? pickCurrentPhase();
+    vscode.commands.registerCommand("aiNativeDevOps.openChecklist", (phaseArg) => {
+        const p = resolvePhaseArg(phaseArg) ?? pickCurrentPhase();
         if (!p)
             return;
         checklistPanel_1.ChecklistPanel.show(p, context);
@@ -324,6 +324,25 @@ function pickCurrentPhase() {
         .getConfiguration("aiNativeDevOps")
         .get("currentPhase", 1);
     return phases_1.PHASES.find((p) => p.id === id);
+}
+function isPhase(value) {
+    if (!value || typeof value !== "object") {
+        return false;
+    }
+    const maybe = value;
+    return (typeof maybe.id === "number" &&
+        typeof maybe.key === "string" &&
+        typeof maybe.label === "string" &&
+        typeof maybe.lifecycleFile === "string" &&
+        typeof maybe.promptFile === "string" &&
+        typeof maybe.checklistFile === "string" &&
+        typeof maybe.agentFile === "string");
+}
+function resolvePhaseArg(value) {
+    if (!isPhase(value)) {
+        return undefined;
+    }
+    return phases_1.PHASES.find((p) => p.id === value.id) ?? value;
 }
 function updateStatusBar(item) {
     const phase = pickCurrentPhase();

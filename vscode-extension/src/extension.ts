@@ -37,8 +37,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Open phase lifecycle guide panel
     vscode.commands.registerCommand(
       "aiNativeDevOps.openPhase",
-      (phase?: Phase) => {
-        const p = phase ?? pickCurrentPhase();
+      (phaseArg?: unknown) => {
+        const p = resolvePhaseArg(phaseArg) ?? pickCurrentPhase();
         if (!p) return;
         PhasePanel.show(p, context, (ph, prompt, panel) =>
           aiRunner.run(ph, prompt ?? "", panel)
@@ -49,8 +49,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Run AI prompt for a phase
     vscode.commands.registerCommand(
       "aiNativeDevOps.runPrompt",
-      async (phase?: Phase) => {
-        const p = phase ?? pickCurrentPhase();
+      async (phaseArg?: unknown) => {
+        const p = resolvePhaseArg(phaseArg) ?? pickCurrentPhase();
         if (!p) return;
         const input = await vscode.window.showInputBox({
           title: `Run AI Prompt · ${p.label}`,
@@ -68,8 +68,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Open checklist panel
     vscode.commands.registerCommand(
       "aiNativeDevOps.openChecklist",
-      (phase?: Phase) => {
-        const p = phase ?? pickCurrentPhase();
+      (phaseArg?: unknown) => {
+        const p = resolvePhaseArg(phaseArg) ?? pickCurrentPhase();
         if (!p) return;
         ChecklistPanel.show(p, context);
       }
@@ -378,6 +378,29 @@ function pickCurrentPhase(): Phase | undefined {
     .getConfiguration("aiNativeDevOps")
     .get<number>("currentPhase", 1);
   return PHASES.find((p) => p.id === id);
+}
+
+function isPhase(value: unknown): value is Phase {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const maybe = value as Partial<Phase>;
+  return (
+    typeof maybe.id === "number" &&
+    typeof maybe.key === "string" &&
+    typeof maybe.label === "string" &&
+    typeof maybe.lifecycleFile === "string" &&
+    typeof maybe.promptFile === "string" &&
+    typeof maybe.checklistFile === "string" &&
+    typeof maybe.agentFile === "string"
+  );
+}
+
+function resolvePhaseArg(value: unknown): Phase | undefined {
+  if (!isPhase(value)) {
+    return undefined;
+  }
+  return PHASES.find((p) => p.id === value.id) ?? value;
 }
 
 function updateStatusBar(item: vscode.StatusBarItem) {

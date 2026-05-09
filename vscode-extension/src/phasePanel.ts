@@ -20,8 +20,11 @@ export function resolveRepoRoot(context: vscode.ExtensionContext): string {
 
 export function readPhaseFile(
   repoRoot: string,
-  relativePath: string
+  relativePath: string | undefined
 ): string | null {
+  if (!relativePath || typeof relativePath !== "string") {
+    return null;
+  }
   const full = path.join(repoRoot, relativePath);
   if (!fs.existsSync(full)) {
     return null;

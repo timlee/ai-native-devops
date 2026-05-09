@@ -1,0 +1,32 @@
+{
+  "package": "ai-devops-policy-files",
+  "created": "2026-05-09",
+  "file_count": 26,
+  "policies": [
+    "README.md",
+    "access-control-policy.md",
+    "ai-guardrails.md",
+    "audit-logging-policy.md",
+    "backup-recovery-policy.md",
+    "change-management-policy.md",
+    "code-review-policy.md",
+    "coding-policy.md",
+    "compliance-policy.md",
+    "cost-management-policy.md",
+    "data-handling-policy.md",
+    "deployment-policy.md",
+    "exception-policy.md",
+    "incident-policy.md",
+    "infrastructure-policy.md",
+    "model-governance-policy.md",
+    "observability-policy.md",
+    "policy-matrix.md",
+    "release-policy.md",
+    "rollback-policy.md",
+    "secrets-management-policy.md",
+    "security-policy.md",
+    "supply-chain-policy.md",
+    "testing-policy.md",
+    "third-party-dependency-policy.md"
+  ]
+}

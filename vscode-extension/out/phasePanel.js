@@ -55,6 +55,9 @@ function resolveRepoRoot(context) {
     return context.extensionPath;
 }
 function readPhaseFile(repoRoot, relativePath) {
+    if (!relativePath || typeof relativePath !== "string") {
+        return null;
+    }
     const full = path.join(repoRoot, relativePath);
     if (!fs.existsSync(full)) {
         return null;
