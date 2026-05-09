@@ -1,0 +1,56 @@
+name: AI Webhook Issue Intake
+
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  enqueue-plan-or-design:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.action == 'opened' || (github.event.action == 'labeled' && contains(github.event.label.name, 'ready-for-design'))
+    steps:
+      - name: Validate webhook secrets
+        run: |
+          test -n "${{ secrets.AI_DEVOPS_WEBHOOK_URL }}"
+          test -n "${{ secrets.AI_DEVOPS_WEBHOOK_TOKEN }}"
+
+      - name: Determine phase and trigger
+        id: routing
+        shell: bash
+        run: |
+          PHASE=plan
+          TRIGGER=github-issue
+          if [ "${{ github.event.action }}" = "labeled" ] && [ "${{ github.event.label.name }}" = "ready-for-design" ]; then
+            PHASE=design
+            TRIGGER=ready-for-design
+          fi
+          echo "phase=$PHASE" >> $GITHUB_OUTPUT
+          echo "trigger=$TRIGGER" >> $GITHUB_OUTPUT
+
+      - name: Send event to webhook bridge
+        env:
+          WEBHOOK_URL: ${{ secrets.AI_DEVOPS_WEBHOOK_URL }}
+          WEBHOOK_TOKEN: ${{ secrets.AI_DEVOPS_WEBHOOK_TOKEN }}
+        run: |
+          curl -fsS -X POST "$WEBHOOK_URL/github" \
+            -H "Content-Type: application/json" \
+            -H "x-ai-native-devops-token: $WEBHOOK_TOKEN" \
+            -d @- <<'JSON'
+          {
+            "source": "github",
+            "phaseKey": "${{ steps.routing.outputs.phase }}",
+            "triggerId": "${{ steps.routing.outputs.trigger }}",
+            "title": "Issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}",
+            "context": "${{ github.event.issue.body }}",
+            "metadata": {
+              "issueNumber": "${{ github.event.issue.number }}",
+              "labels": "${{ join(github.event.issue.labels.*.name, ',') }}",
+              "issueUrl": "${{ github.event.issue.html_url }}"
+            }
+          }
+          JSON

@@ -1,0 +1,61 @@
+name: AI Webhook Pull Request Routing
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  enqueue-code-or-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate webhook secrets
+        run: |
+          test -n "${{ secrets.AI_DEVOPS_WEBHOOK_URL }}"
+          test -n "${{ secrets.AI_DEVOPS_WEBHOOK_TOKEN }}"
+
+      - name: Determine phase and trigger
+        id: routing
+        shell: bash
+        run: |
+          PHASE=test
+          TRIGGER=pr-opened
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PHASE=code
+            TRIGGER=ai-code
+          elif [ "${{ github.event.action }}" = "labeled" ] && [ "${{ github.event.label.name }}" = "ai-code" ]; then
+            PHASE=code
+            TRIGGER=ai-code
+          fi
+          echo "phase=$PHASE" >> $GITHUB_OUTPUT
+          echo "trigger=$TRIGGER" >> $GITHUB_OUTPUT
+
+      - name: Send PR event to webhook bridge
+        env:
+          WEBHOOK_URL: ${{ secrets.AI_DEVOPS_WEBHOOK_URL }}
+          WEBHOOK_TOKEN: ${{ secrets.AI_DEVOPS_WEBHOOK_TOKEN }}
+        run: |
+          curl -fsS -X POST "$WEBHOOK_URL/github" \
+            -H "Content-Type: application/json" \
+            -H "x-ai-native-devops-token: $WEBHOOK_TOKEN" \
+            -d @- <<'JSON'
+          {
+            "source": "github",
+            "phaseKey": "${{ steps.routing.outputs.phase }}",
+            "triggerId": "${{ steps.routing.outputs.trigger }}",
+            "title": "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}",
+            "context": "${{ github.event.pull_request.body }}",
+            "metadata": {
+              "prNumber": "${{ github.event.pull_request.number }}",
+              "action": "${{ github.event.action }}",
+              "baseRef": "${{ github.event.pull_request.base.ref }}",
+              "headRef": "${{ github.event.pull_request.head.ref }}",
+              "author": "${{ github.event.pull_request.user.login }}",
+              "prUrl": "${{ github.event.pull_request.html_url }}"
+            }
+          }
+          JSON

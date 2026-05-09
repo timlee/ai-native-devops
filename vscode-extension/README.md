@@ -70,6 +70,7 @@ Or configure `aiNativeDevOps.repoRoot` to point to your clone of the `ai-native-
 | `AI DevOps: Scaffold Agent Artifacts` | Create expected artifact files for selected phase |
 | `AI DevOps: Process Webhook Queue` | Consume queued GitHub/Jira/Slack/custom webhook events and run matching agent automation |
 | `AI DevOps: Generate CODE Agent PR Draft` | One-click PR body generator with required governance sections |
+| `AI DevOps: Scaffold GitHub Webhook Workflows` | Generate ready-to-use GitHub Actions workflows for issue intake and CI failure routing |
 
 ## Full AI Automation Design (11 Agents)
 
@@ -123,6 +124,28 @@ The bridge writes events to `.ai-native-devops/events.jsonl` by default.
 - Or enable polling with settings:
 	- `aiNativeDevOps.enableWebhookPolling = true`
 	- `aiNativeDevOps.webhookPollingSeconds = 30`
+
+### 2.5. Scaffold GitHub Actions workflow files
+
+- Run command: `AI DevOps: Scaffold GitHub Webhook Workflows`
+- This creates:
+	- `.github/workflows/ai-webhook-issue-intake.yml`
+	- `.github/workflows/ai-webhook-ci-failures.yml`
+	- `.github/workflows/ai-webhook-pr-routing.yml`
+
+PR routing behavior:
+
+- Pull request `opened/reopened/synchronize` routes to TEST (`pr-opened`)
+- Pull request labeled `ai-code` routes to CODE (`ai-code`)
+
+Required GitHub repo secrets:
+
+- `AI_DEVOPS_WEBHOOK_URL` (example: https://your-webhook-endpoint.example.com)
+- `AI_DEVOPS_WEBHOOK_TOKEN`
+
+Note:
+
+- GitHub-hosted runners cannot reach localhost on your machine. Use a reachable bridge endpoint (public service, tunnel, or self-hosted runner).
 
 ### 3. Optional shared secret
 
@@ -193,7 +216,7 @@ This creates a `.vsix` file in `vscode-extension/`.
 Anyone can install it with:
 
 ```bash
-code --install-extension ai-native-devops-0.1.0.vsix
+code --install-extension ai-native-devops-0.1.3.vsix
 ```
 
 or in VS Code:

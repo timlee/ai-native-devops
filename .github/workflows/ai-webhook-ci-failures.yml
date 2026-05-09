@@ -1,0 +1,61 @@
+name: AI Webhook CI Failure Events
+
+on:
+  workflow_run:
+    workflows: ["CI", "Security Scan"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  enqueue-failure-event:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: Validate webhook secrets
+        run: |
+          test -n "${{ secrets.AI_DEVOPS_WEBHOOK_URL }}"
+          test -n "${{ secrets.AI_DEVOPS_WEBHOOK_TOKEN }}"
+
+      - name: Route to build/test/secure phase
+        id: routing
+        shell: bash
+        run: |
+          WF_NAME='${{ github.event.workflow_run.name }}'
+          PHASE=build
+          TRIGGER=ci-failed
+          if echo "$WF_NAME" | grep -Ei 'security|sast|sca|secret|container|iac' >/dev/null; then
+            PHASE=secure-comply
+            TRIGGER=sast-failed
+          elif echo "$WF_NAME" | grep -Ei 'test' >/dev/null; then
+            PHASE=test
+            TRIGGER=test-failed
+          fi
+          echo "phase=$PHASE" >> $GITHUB_OUTPUT
+          echo "trigger=$TRIGGER" >> $GITHUB_OUTPUT
+
+      - name: Send failure event to webhook bridge
+        env:
+          WEBHOOK_URL: ${{ secrets.AI_DEVOPS_WEBHOOK_URL }}
+          WEBHOOK_TOKEN: ${{ secrets.AI_DEVOPS_WEBHOOK_TOKEN }}
+        run: |
+          curl -fsS -X POST "$WEBHOOK_URL/github" \
+            -H "Content-Type: application/json" \
+            -H "x-ai-native-devops-token: $WEBHOOK_TOKEN" \
+            -d @- <<'JSON'
+          {
+            "source": "github",
+            "phaseKey": "${{ steps.routing.outputs.phase }}",
+            "triggerId": "${{ steps.routing.outputs.trigger }}",
+            "title": "Workflow failed: ${{ github.event.workflow_run.name }}",
+            "context": "Conclusion: ${{ github.event.workflow_run.conclusion }}",
+            "metadata": {
+              "workflowName": "${{ github.event.workflow_run.name }}",
+              "runId": "${{ github.event.workflow_run.id }}",
+              "runUrl": "${{ github.event.workflow_run.html_url }}"
+            }
+          }
+          JSON

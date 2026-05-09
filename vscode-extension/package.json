@@ -2,7 +2,7 @@
   "name": "ai-native-devops",
   "displayName": "AI-Native DevOps",
   "description": "Guide software development through the 11-phase AI-native DevOps lifecycle using Claude, Codex, or GitHub Copilot APIs",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "publisher": "ai-native-devops",
   "license": "MIT",
   "repository": {
@@ -102,6 +102,11 @@
       {
         "command": "aiNativeDevOps.generateCodePrTemplate",
         "title": "Generate CODE Agent PR Draft",
+        "category": "AI DevOps"
+      },
+      {
+        "command": "aiNativeDevOps.scaffoldGithubWebhookWorkflows",
+        "title": "Scaffold GitHub Webhook Workflows",
         "category": "AI DevOps"
       }
     ],
