@@ -43,9 +43,10 @@ class LifecycleTreeItem extends vscode.TreeItem {
         this.isActive = isActive;
         this.resourceUri = resourceUri;
         this.contextValue = "phase";
-        this.tooltip = `Phase ${phase.id}: ${phase.label}`;
-        this.description = isActive ? "← current" : "";
-        // Highlight the active phase
+        this.description = isActive ? "active" : "";
+        const tooltip = new vscode.MarkdownString(`**${phase.label}**\n\nPhase ${phase.id} of 11 · Click to open guide`);
+        tooltip.isTrusted = true;
+        this.tooltip = tooltip;
         if (isActive) {
             this.iconPath = new vscode.ThemeIcon("circle-filled", new vscode.ThemeColor("charts.blue"));
         }

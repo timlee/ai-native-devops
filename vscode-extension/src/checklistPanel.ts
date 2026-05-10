@@ -141,12 +141,16 @@ export class ChecklistPanel {
             </li>`
         )
         .join("");
-      sectionsHtml += `<div class="section"><h3>${escapeHtml(section)} <span class="section-progress">${done}/${items.length}</span></h3><ul>${itemsHtml}</ul></div>`;
+      sectionsHtml += `<div class="section"><div class="section-header"><h3>${escapeHtml(section)}</h3><span class="section-count">${done}/${items.length}</span></div><ul>${itemsHtml}</ul></div>`;
     });
 
     const total = this._items.length;
     const done = this._items.filter((i) => i.checked).length;
     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    const emptyState = total === 0
+      ? `<div class="empty-state"><p>No checklist items found.</p><p class="empty-hint">Checklist file: <code>${escapeHtml(this.phase.checklistFile)}</code></p></div>`
+      : "";
 
     this._panel.webview.html = `<!DOCTYPE html>
 <html lang="en">
@@ -155,34 +159,59 @@ export class ChecklistPanel {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';"/>
 <title>Checklist</title>
 <style>
-  body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); background: var(--vscode-editor-background); padding: 16px 20px; }
-  h2 { margin-top: 0; font-size: 1.2em; }
-  h3 { font-size: 0.95em; color: var(--vscode-symbolIcon-classForeground); margin: 14px 0 6px; }
-  ul { list-style: none; padding: 0; margin: 0; }
-  .cl-item { padding: 4px 0; }
-  .cl-item label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
-  .cl-item input[type=checkbox] { margin-top: 2px; flex-shrink: 0; }
-  .cl-item span { line-height: 1.4; }
-  .cl-item.done span { text-decoration: line-through; opacity: 0.55; }
-  .progress-bar-wrap { background: var(--vscode-progressBar-background, #444); border-radius: 4px; height: 6px; margin: 8px 0 16px; }
-  .progress-bar { background: var(--vscode-charts-green, #4ec9b0); height: 6px; border-radius: 4px; transition: width 0.3s; }
-  .progress-label { font-size: 12px; color: var(--vscode-descriptionForeground); margin-bottom: 4px; }
-  .section { margin-bottom: 16px; }
-  .toolbar { display: flex; gap: 8px; margin: 10px 0 14px; }
-  .btn { border: 1px solid var(--vscode-panel-border); background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); color: var(--vscode-foreground); background: var(--vscode-editor-background); display: flex; flex-direction: column; }
+
+  .header { flex-shrink: 0; padding: 10px 16px 8px; border-bottom: 1px solid var(--vscode-panel-border); background: var(--vscode-editorGroupHeader-tabsBackground); }
+  .header-top { display: flex; align-items: baseline; justify-content: space-between; }
+  h2 { margin: 0; font-size: 1rem; font-weight: 600; }
+  .progress-label { font-size: 11px; color: var(--vscode-descriptionForeground); }
+  .progress-track { background: var(--vscode-panel-border); border-radius: 3px; height: 4px; margin-top: 8px; }
+  .progress-fill { background: var(--vscode-charts-green, #4ec9b0); height: 4px; border-radius: 3px; transition: width 0.25s ease; }
+
+  .toolbar { flex-shrink: 0; display: flex; gap: 6px; padding: 7px 16px; border-bottom: 1px solid var(--vscode-panel-border); }
+  .btn { border: 1px solid var(--vscode-panel-border); background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border-radius: 3px; padding: 3px 10px; cursor: pointer; font-size: 11px; font-family: var(--vscode-font-family); }
   .btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
-  .section-progress { font-size: 11px; color: var(--vscode-descriptionForeground); font-weight: normal; }
+  .btn:focus-visible { outline: 1px solid var(--vscode-focusBorder); }
+
+  .scroll-area { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px 20px; }
+
+  .section { margin-bottom: 18px; }
+  .section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--vscode-panel-border); }
+  h3 { margin: 0; font-size: 0.85em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--vscode-descriptionForeground); }
+  .section-count { font-size: 10px; color: var(--vscode-descriptionForeground); }
+
+  ul { list-style: none; padding: 0; margin: 0; }
+  .cl-item { padding: 3px 0; }
+  .cl-item label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; padding: 3px 6px; border-radius: 4px; margin: 0 -6px; }
+  .cl-item label:hover { background: var(--vscode-toolbar-hoverBackground); }
+  .cl-item input[type=checkbox] { margin-top: 2px; flex-shrink: 0; cursor: pointer; accent-color: var(--vscode-charts-blue, #0078d4); }
+  .cl-item span { line-height: 1.45; font-size: 0.9em; }
+  .cl-item.done span { text-decoration: line-through; opacity: 0.5; }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--vscode-descriptionForeground); }
+  .empty-state p { margin: 6px 0; }
+  .empty-hint { font-size: 11px; }
+  .empty-hint code { font-family: var(--vscode-editor-font-family); font-size: 0.9em; }
 </style>
 </head>
 <body>
-<h2>${escapeHtml(this.phase.label)} Checklist</h2>
-<div class="progress-label" id="progressLabel">${done} / ${total} complete</div>
-<div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:${pct}%"></div></div>
+<div class="header">
+  <div class="header-top">
+    <h2>${escapeHtml(this.phase.label)} Checklist</h2>
+    <span class="progress-label" id="progressLabel">${done} / ${total}</span>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progressBar" style="width:${pct}%"></div></div>
+</div>
 <div class="toolbar">
   <button class="btn" onclick="markAll()">Mark all complete</button>
-  <button class="btn" onclick="resetAll()">Reset</button>
+  <button class="btn" onclick="resetAll()">Reset all</button>
 </div>
-${sectionsHtml}
+<div class="scroll-area">
+  ${emptyState}
+  ${sectionsHtml}
+</div>
 <script>
   const vscode = acquireVsCodeApi();
 
@@ -193,18 +222,13 @@ ${sectionsHtml}
     vscode.postMessage({ command: 'toggle', index, checked: el.checked });
   }
 
-  function markAll() {
-    vscode.postMessage({ command: 'markAll' });
-  }
-
-  function resetAll() {
-    vscode.postMessage({ command: 'resetAll' });
-  }
+  function markAll() { vscode.postMessage({ command: 'markAll' }); }
+  function resetAll() { vscode.postMessage({ command: 'resetAll' }); }
 
   window.addEventListener('message', event => {
     const msg = event.data;
     if (msg.command === 'progress') {
-      document.getElementById('progressLabel').textContent = msg.done + ' / ' + msg.total + ' complete';
+      document.getElementById('progressLabel').textContent = msg.done + ' / ' + msg.total;
       const pct = msg.total > 0 ? Math.round(msg.done / msg.total * 100) : 0;
       document.getElementById('progressBar').style.width = pct + '%';
     }
