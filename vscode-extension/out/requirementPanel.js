@@ -42,13 +42,11 @@ const vscode = __importStar(require("vscode"));
 const phasePanel_1 = require("./phasePanel");
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ISSUE_SECTIONS = [
-    "Product Requirements",
     "User Stories",
     "Acceptance Criteria",
     "Backlog Items",
 ];
 const SECTION_FILES = {
-    "Product Requirements": "plan/product-requirements.md",
     "User Stories": "plan/user-stories.md",
     "Acceptance Criteria": "plan/acceptance-criteria.md",
     "Backlog Items": "plan/backlog-items.md",
@@ -64,16 +62,14 @@ function buildPrompt(moduleName, reqId, description) {
         `- Description: ${description}`,
         "",
         "Task:",
-        "Generate four planning artifacts for this requirement as structured Markdown.",
+        "Generate three planning artifacts for this requirement as structured Markdown.",
         "Use these exact ## headings in this order (no text before the first heading):",
         "",
-        "## Product Requirements",
         "## User Stories",
         "## Acceptance Criteria",
         "## Backlog Items",
         "",
         "Guidelines:",
-        "- Product Requirements: numbered list of clear, testable requirements scoped to this module.",
         "- User Stories: \"As a <role>, I want <goal>, so that <benefit>\" — one per bullet.",
         "- Acceptance Criteria: measurable checkbox conditions (- [ ]) tied to each story.",
         "- Backlog Items: prioritized list with P0/P1/P2 labels and S/M/L effort estimates.",
@@ -89,9 +85,6 @@ function buildDesignPrompt(moduleName, reqId, description, requirements) {
         `- Module: ${moduleName}`,
         `- ID: ${reqId}`,
         `- Description: ${description}`,
-        "",
-        "## Product Requirements (confirmed by user)",
-        requirements.productRequirements,
         "",
         "## User Stories (confirmed by user)",
         requirements.userStories,
@@ -195,7 +188,6 @@ function buildIssueBody(moduleName, reqId, requirements, design) {
         "",
     ];
     const reqMap = [
-        ["Product Requirements", requirements.productRequirements],
         ["User Stories", requirements.userStories],
         ["Acceptance Criteria", requirements.acceptanceCriteria],
         ["Backlog Items", requirements.backlogItems],
@@ -360,7 +352,6 @@ class RequirementPanel {
                 }
                 const sections = parseSections(this._rawOutput);
                 const artifacts = {
-                    productRequirements: sections.get("Product Requirements") ?? "",
                     userStories: sections.get("User Stories") ?? "",
                     acceptanceCriteria: sections.get("Acceptance Criteria") ?? "",
                     backlogItems: sections.get("Backlog Items") ?? "",
@@ -393,7 +384,6 @@ class RequirementPanel {
         this._workflowCtx.requirements = artifacts;
         const { moduleName, reqId } = this._workflowCtx;
         const sections = new Map([
-            ["Product Requirements", artifacts.productRequirements],
             ["User Stories", artifacts.userStories],
             ["Acceptance Criteria", artifacts.acceptanceCriteria],
             ["Backlog Items", artifacts.backlogItems],
@@ -688,10 +678,6 @@ class RequirementPanel {
   <div id="reqReviewArea" style="display:none">
     <p class="review-hint">Review and edit each artifact, then click Confirm &amp; Continue.</p>
     <div class="artifact-group">
-      <label class="artifact-label" for="ta-productRequirements">Product Requirements</label>
-      <textarea class="artifact-ta" id="ta-productRequirements"></textarea>
-    </div>
-    <div class="artifact-group">
       <label class="artifact-label" for="ta-userStories">User Stories</label>
       <textarea class="artifact-ta" id="ta-userStories"></textarea>
     </div>
@@ -805,7 +791,6 @@ class RequirementPanel {
     document.getElementById('confirmReqBtn').disabled = true;
     vscode.postMessage({
       command: 'confirmRequirements',
-      productRequirements: document.getElementById('ta-productRequirements').value,
       userStories:         document.getElementById('ta-userStories').value,
       acceptanceCriteria:  document.getElementById('ta-acceptanceCriteria').value,
       backlogItems:        document.getElementById('ta-backlogItems').value,
@@ -928,7 +913,6 @@ class RequirementPanel {
         document.getElementById('ta-threatModel').value       = a.threatModel || '';
       } else {
         document.getElementById('reqSpinner').style.display = 'none';
-        document.getElementById('ta-productRequirements').value = a.productRequirements || '';
         document.getElementById('ta-userStories').value         = a.userStories || '';
         document.getElementById('ta-acceptanceCriteria').value  = a.acceptanceCriteria || '';
         document.getElementById('ta-backlogItems').value        = a.backlogItems || '';
