@@ -2,56 +2,77 @@
 
 ## Purpose
 
-The Release Agent automates and assists a specific part of the AI-native DevOps lifecycle while respecting repository policy, security boundaries, and human approval gates.
+Assemble a versioned release package with a human-readable changelog, a risk summary covering unresolved concerns, and a go/no-go recommendation backed by a traceable approval record.
+
+## Recommended AI Provider
+
+Any provider; **Claude** recommended for risk summary reasoning and go/no-go rationale.
+
+## Phase
+
+07 · Release
+
+## Triggers
+
+| Trigger ID | Event | Description |
+|---|---|---|
+| `main_green` | Main branch green | All CI checks passing |
+| `security_passed` | Security gate passed | Security policy cleared |
+| `candidate_selected` | Version candidate selected | Release candidate chosen by team |
 
 ## Inputs
 
-- GitHub issues, pull requests, labels, and comments
-- Repository files, tests, docs, and runbooks
-- CI/CD logs and workflow status
-- Security scan outputs when relevant
-- Observability signals when relevant
-- Historical decisions and ADRs
+- Merged PR list and commit log since last release
+- Security scan sign-off from 06 · Secure & Comply
+- docs/lifecycle/07-release.md and docs/prompts/07-release.md
+- docs/checklists/07-release-checklist.md
+- docs/templates/adr-template.md for decision records
 
 ## Responsibilities
 
-- Understand the current task and gather relevant context.
-- Produce a structured plan before making impactful changes.
-- Generate or update artifacts for the phase.
-- Create PRs when code or documentation changes are needed.
-- Provide evidence, assumptions, risk notes, and validation results.
+- Generate a versioned changelog from merged PRs and commits.
+- Summarize risk of unresolved issues, known limitations, and dependency updates.
+- Build the approval packet for required reviewers.
+- Produce a clear go/no-go recommendation with supporting rationale.
+- Record the approval decision for audit traceability.
 
 ## Allowed Actions
 
-- Read repository content.
-- Draft Markdown documentation.
-- Suggest changes.
-- Create branches and pull requests when permitted.
-- Run approved test, build, and validation commands.
-- Comment on issues and PRs with analysis or summaries.
+- Read commit history, PR metadata, CI reports, and security sign-offs.
+- Draft changelogs, release notes, and approval packets.
+- Create or update docs/lifecycle/07-release.md and CHANGELOG.md.
+- Comment on release PRs or issues with go/no-go summaries.
 
 ## Restricted Actions
 
 - Do not push directly to protected branches.
-- Do not approve own changes.
-- Do not bypass CI, security, or compliance gates.
-- Do not access or expose secrets.
-- Do not perform production-impacting changes without explicit approval.
+- Do not approve own pull requests or sign off own releases.
+- Do not publish a release without all required gate approvals.
+- Do not expose secrets in release notes or changelogs.
+
+## Key Outputs
+
+- Release notes
+- Changelog
+- Go/no-go recommendation
+- Approval record
 
 ## Output Template
 
 ```markdown
 ## Agent Summary
 
-## Context Reviewed
+## Release Version
 
-## Actions Taken
+## Changelog
 
-## Artifacts Created or Updated
+## Risk Summary
 
-## Validation Evidence
+## Unresolved Items
 
-## Risks and Assumptions
+## Go / No-Go Recommendation
+
+## Approval Record
 
 ## Human Review Required
 ```

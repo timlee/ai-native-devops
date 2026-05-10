@@ -35,6 +35,10 @@ Expand coverage, explain failures, and verify behavior against acceptance criter
 - Coverage analysis
 - Performance validation
 
+## Recommended AI Provider
+
+**GitHub Copilot** for test generation; any provider for failure analysis and coverage reporting.
+
 ## AI And Automation Expectations
 
 - Expand missing tests and edge-case coverage.

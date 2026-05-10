@@ -36,6 +36,10 @@ Prepare a safe rollout plan with environment protections, canary checkpoints, he
 - Health verification
 - Rollback planning
 
+## Recommended AI Provider
+
+Any provider — rollout planning and environment validation are well-supported by all.
+
 ## AI And Automation Expectations
 
 - Validate manifests, environments, and readiness checks.

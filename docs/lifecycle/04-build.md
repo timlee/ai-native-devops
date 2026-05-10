@@ -35,6 +35,10 @@ Diagnose build and packaging issues, maintain reliable pipeline behavior, and do
 - Container build or artifact assembly
 - Artifact provenance and SBOM expectations
 
+## Recommended AI Provider
+
+Any provider — build log analysis and remediation are well-supported by all.
+
 ## AI And Automation Expectations
 
 - Analyze build failures and probable root causes.

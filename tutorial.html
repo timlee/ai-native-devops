@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI-Native DevOps — VS Code Extension Tutorial</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --accent3: #d29922;
+      --accent4: #f85149;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --code-bg: #1f2937;
+      --tag-bg: #1f3a5f;
+      --tag-text: #79c0ff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ── Layout ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0;
+      width: 260px; height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 24px 0;
+      z-index: 100;
+    }
+
+    nav .logo {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    nav .logo h2 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    nav .logo p { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    nav a {
+      display: block;
+      padding: 6px 20px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      border-left: 2px solid transparent;
+      transition: all .15s;
+    }
+    nav a:hover, nav a.active {
+      color: var(--text);
+      border-left-color: var(--accent);
+      background: var(--surface2);
+    }
+    nav .nav-section {
+      padding: 14px 20px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    main {
+      margin-left: 260px;
+      padding: 48px 56px;
+      max-width: 980px;
+    }
+
+    /* ── Typography ── */
+    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
+    h2 { font-size: 1.5rem; font-weight: 600; margin: 48px 0 16px; padding-top: 48px; border-top: 1px solid var(--border); color: var(--text); }
+    h3 { font-size: 1.1rem; font-weight: 600; margin: 28px 0 10px; color: var(--text); }
+    h4 { font-size: .95rem; font-weight: 600; margin: 20px 0 8px; color: var(--accent); }
+    p  { margin-bottom: 14px; color: var(--text); }
+    ul, ol { padding-left: 22px; margin-bottom: 14px; }
+    li { margin-bottom: 6px; }
+    strong { color: var(--text); }
+    a  { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #0d2137 0%, #0d1117 60%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      margin-bottom: 40px;
+    }
+    .hero .badge {
+      display: inline-block;
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .hero h1 { color: var(--text); }
+    .hero p  { color: var(--text-muted); font-size: 16px; max-width: 680px; }
+
+    /* ── Code ── */
+    code {
+      background: var(--code-bg);
+      color: #a5d6ff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: .85em;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+    pre code {
+      background: none;
+      color: #cdd9e5;
+      padding: 0;
+      font-size: .85rem;
+      line-height: 1.6;
+    }
+    .cmd { color: #7ee787; }
+    .cmt { color: var(--text-muted); }
+    .str { color: #a5d6ff; }
+    .kw  { color: #ff7b72; }
+
+    /* ── Callouts ── */
+    .callout {
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 20px 0;
+      border-left: 4px solid;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .callout .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .callout.info  { background: #0d2137; border-color: var(--accent); }
+    .callout.tip   { background: #0f2f14; border-color: var(--accent2); }
+    .callout.warn  { background: #2b1f08; border-color: var(--accent3); }
+    .callout.danger{ background: #2b0f0f; border-color: var(--accent4); }
+    .callout p { margin: 0; }
+
+    /* ── Steps ── */
+    .steps { counter-reset: step; margin: 20px 0; }
+    .step {
+      display: flex; gap: 20px; margin-bottom: 28px;
+      align-items: flex-start;
+    }
+    .step-num {
+      counter-increment: step;
+      width: 36px; height: 36px;
+      background: var(--accent);
+      color: #000;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px;
+      flex-shrink: 0;
+    }
+    .step-body h4 { margin-top: 6px; }
+
+    /* ── Cards ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+    .card .card-tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--tag-text);
+      background: var(--tag-bg);
+      padding: 2px 8px;
+      border-radius: 20px;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+    .card h4 { margin: 0 0 6px; font-size: 14px; }
+    .card p  { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+    /* ── Phase table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    th {
+      background: var(--surface2);
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 2px solid var(--border);
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface); }
+    .phase-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px; height: 24px;
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* ── Command pills ── */
+    .cmd-pill {
+      display: inline-block;
+      background: #1a1f2e;
+      border: 1px solid #3d4f7c;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #79c0ff;
+      margin: 2px;
+      white-space: nowrap;
+    }
+
+    /* ── Level badges ── */
+    .level-row td:first-child { font-weight: 600; color: var(--accent); }
+    .level-l0 .level-badge { background: #21262d; color: #8b949e; }
+    .level-l1 .level-badge { background: #0f2f14; color: #3fb950; }
+    .level-l2 .level-badge { background: #0d2137; color: #58a6ff; }
+    .level-l3 .level-badge { background: #2b1f08; color: #d29922; }
+    .level-l4 .level-badge { background: #2b1630; color: #bc8cff; }
+    .level-l5 .level-badge { background: #2b0f0f; color: #f85149; }
+    .level-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* ── Kbd ── */
+    kbd {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--text);
+    }
+
+    /* ── Footer ── */
+    footer {
+      margin-left: 260px;
+      padding: 32px 56px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* ── Scroll behavior ── */
+    html { scroll-behavior: smooth; }
+
+    @media (max-width: 800px) {
+      nav { display: none; }
+      main { margin-left: 0; padding: 24px 20px; }
+      footer { margin-left: 0; padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar Navigation ── -->
+<nav>
+  <div class="logo">
+    <h2>AI-Native DevOps</h2>
+    <p>VS Code Extension v0.1.9</p>
+  </div>
+
+  <span class="nav-section">Getting Started</span>
+  <a href="#overview">Overview</a>
+  <a href="#install">Installation</a>
+  <a href="#provider">Choose an AI Provider</a>
+
+  <span class="nav-section">Core Features</span>
+  <a href="#sidebar">Lifecycle Sidebar</a>
+  <a href="#phase-guide">Phase Guides</a>
+  <a href="#ai-prompt">AI Prompts</a>
+  <a href="#checklist">Phase Checklists</a>
+  <a href="#custom-prompt">Custom Prompts</a>
+
+  <span class="nav-section">Automation</span>
+  <a href="#agent">Agent Automation</a>
+  <a href="#scaffold">Scaffold Artifacts</a>
+  <a href="#webhook">Webhook Queue</a>
+  <a href="#pr-template">PR Draft Generator</a>
+
+  <span class="nav-section">Reference</span>
+  <a href="#phases-ref">All 11 Phases</a>
+  <a href="#maturity">Adoption Levels</a>
+  <a href="#governance">Governance Rules</a>
+  <a href="#commands-ref">Command Reference</a>
+</nav>
+
+<!-- ── Main Content ── -->
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="badge">VS Code Extension Tutorial</div>
+    <h1>AI-Native DevOps</h1>
+    <p>
+      A guided tutorial for using the AI-Native DevOps VS Code extension —
+      your control panel for navigating the 11-phase software delivery lifecycle
+      with Claude, OpenAI Codex, or GitHub Copilot.
+    </p>
+  </div>
+
+  <!-- ── OVERVIEW ── -->
+  <h2 id="overview">Overview</h2>
+  <p>
+    The <strong>AI-Native DevOps</strong> extension brings a structured, policy-governed AI
+    workflow directly into VS Code. Instead of asking AI for ad-hoc help, you work through
+    eleven well-defined lifecycle phases — from planning and design all the way through
+    incident response — each backed by curated prompts, entry checklists, and expected
+    output artifacts.
+  </p>
+  <p>
+    The governing principle is <strong>autonomous execution with policy-controlled human governance</strong>:
+    AI agents draft, propose, and automate; humans review, approve, and merge. Nothing goes
+    to production without a traceable record.
+  </p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-tag">What it does</div>
+      <h4>Guided phase navigation</h4>
+      <p>Open the guide, prompt, and checklist for whichever lifecycle phase you are in — directly from the sidebar.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">What it does</div>
+      <h4>AI-powered actions</h4>
+      <p>Run phase-aware prompts against Claude, OpenAI, or GitHub Copilot with a single click.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">What it does</div>
+      <h4>Artifact scaffolding</h4>
+      <p>Generate the required output files for each phase so nothing is accidentally skipped.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">What it does</div>
+      <h4>Webhook automation</h4>
+      <p>Process GitHub events from a local queue and trigger the right agent for each event type.</p>
+    </div>
+  </div>
+
+  <!-- ── INSTALLATION ── -->
+  <h2 id="install">Installation</h2>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Prerequisites</h4>
+        <p>Make sure you have <strong>VS Code 1.85 or newer</strong> installed. The extension requires a workspace folder open (your product repository).</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Install the VSIX package</h4>
+        <p>The extension ships as a pre-built <code>.vsix</code> file in the repository.</p>
+        <pre><code><span class="cmt"># From the repository root</span>
+<span class="cmd">code --install-extension</span> <span class="str">vscode-extension/ai-native-devops-0.1.9.vsix</span></code></pre>
+        <p>Alternatively, open VS Code → <kbd>Ctrl+Shift+P</kbd> → <em>Extensions: Install from VSIX…</em> and select the file.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Open your repository</h4>
+        <p>Open the folder that contains your project (or this reference repository itself) in VS Code.
+        The extension activates automatically when VS Code finishes loading.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Verify activation</h4>
+        <p>Look for the <strong>AI-Native DevOps icon</strong> in the Activity Bar on the left side of VS Code.
+        Click it to open the Lifecycle Phases sidebar.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <div class="icon">💡</div>
+    <p><strong>Development build:</strong> If you want to build from source, run
+    <code>npm install &amp;&amp; npm run compile</code> inside <code>vscode-extension/</code>,
+    then press <kbd>F5</kbd> in VS Code to launch an Extension Development Host.</p>
+  </div>
+
+  <!-- ── PROVIDER ── -->
+  <h2 id="provider">Choose an AI Provider</h2>
+  <p>
+    Before running any prompts, tell the extension which AI backend to use.
+    Open the Command Palette (<kbd>Ctrl+Shift+P</kbd>) and run:
+  </p>
+  <p><span class="cmd-pill">AI DevOps: Select AI Provider</span></p>
+
+  <p>Three providers are available:</p>
+
+  <table>
+    <thead>
+      <tr><th>Provider</th><th>Model</th><th>Key required?</th><th>Best for</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>GitHub Copilot</strong></td>
+        <td>Copilot Chat</td>
+        <td>No — sign in to Copilot in VS Code</td>
+        <td>Teams already on a Copilot subscription</td>
+      </tr>
+      <tr>
+        <td><strong>Anthropic Claude</strong></td>
+        <td>claude-3-5-sonnet or newer</td>
+        <td>Yes — Anthropic API key (<code>sk-ant-…</code>)</td>
+        <td>Reasoning-heavy tasks: planning, architecture, security, incidents</td>
+      </tr>
+      <tr>
+        <td><strong>OpenAI / Codex</strong></td>
+        <td>gpt-4o or any OpenAI model</td>
+        <td>Yes — OpenAI API key (<code>sk-…</code>)</td>
+        <td>Implementation and code generation tasks</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    API keys are stored in <strong>VS Code Secret Storage</strong> — they are never written to
+    disk or exposed to your repository.
+  </p>
+
+  <div class="callout info">
+    <div class="icon">ℹ️</div>
+    <p>You can switch providers at any time. The selection is stored per-machine, not per-workspace.</p>
+  </div>
+
+  <!-- ── SIDEBAR ── -->
+  <h2 id="sidebar">Lifecycle Sidebar</h2>
+  <p>
+    Click the <strong>AI-Native DevOps icon</strong> in the Activity Bar to open the sidebar.
+    You will see a tree view called <em>Lifecycle Phases</em> listing all eleven phases in order.
+  </p>
+  <p>Each phase entry has three inline action buttons:</p>
+  <ul>
+    <li><strong>Open Phase Guide</strong> — opens the rich webview for that phase</li>
+    <li><strong>Run AI Prompt</strong> — prompts the AI for that phase immediately</li>
+    <li><strong>Open Checklist</strong> — opens the interactive checklist panel</li>
+  </ul>
+
+  <div class="callout tip">
+    <div class="icon">💡</div>
+    <p>If you click a button without selecting a phase first, a quick-pick menu appears
+    so you can choose the phase you want.</p>
+  </div>
+
+  <!-- ── PHASE GUIDE ── -->
+  <h2 id="phase-guide">Phase Guides</h2>
+  <p>
+    A <strong>Phase Guide</strong> is a tabbed webview panel that consolidates everything you
+    need for a single lifecycle phase in one place.
+  </p>
+
+  <h3>Opening a phase guide</h3>
+  <ol>
+    <li>Click a phase in the sidebar <em>or</em> run <span class="cmd-pill">AI DevOps: Open Phase Guide</span> from the Command Palette.</li>
+    <li>The panel opens with four tabs: <strong>Guide</strong>, <strong>Requirements</strong>, <strong>AI Prompt</strong>, and <strong>Checklist</strong>.</li>
+  </ol>
+
+  <h3>Tabs inside the panel</h3>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-tag">Tab 1</div>
+      <h4>Guide</h4>
+      <p>The full phase documentation rendered as HTML — objectives, activities, responsibilities, and links to related policies.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">Tab 2</div>
+      <h4>Requirements</h4>
+      <p>Required input files and expected output artifacts. Missing outputs appear with a one-click <em>Create</em> button to scaffold them.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">Tab 3</div>
+      <h4>AI Prompt</h4>
+      <p>The curated phase prompt pre-loaded into a text area. Edit if needed, then click <strong>Run</strong> to send it to your selected AI provider.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">Tab 4</div>
+      <h4>Checklist</h4>
+      <p>The phase checklist embedded inline. Check off items as you complete them; state is persisted across sessions.</p>
+    </div>
+  </div>
+
+  <div class="callout info">
+    <div class="icon">ℹ️</div>
+    <p>You can also run <span class="cmd-pill">AI DevOps: Open AI DevOps Dashboard</span> — it opens the phase guide for the phase you are currently working on.</p>
+  </div>
+
+  <!-- ── AI PROMPT ── -->
+  <h2 id="ai-prompt">AI Prompts</h2>
+  <p>
+    Each lifecycle phase ships with a curated prompt that tells the AI exactly what role
+    to play, what to read, and what to produce.
+  </p>
+
+  <h3>Running the default phase prompt</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p>Run <span class="cmd-pill">AI DevOps: Run AI Prompt for Phase</span> from the Command Palette or click the play button next to a phase in the sidebar.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p>An input box appears. <strong>Leave it blank</strong> and press Enter to use the default phase prompt, or type an additional instruction to augment it.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p>The Phase Guide panel opens (or focuses) and streams the AI response into the <strong>AI Prompt</strong> tab in real time.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>What makes a good phase prompt?</h3>
+  <p>The built-in prompts follow this structure — use the same pattern for custom instructions:</p>
+  <pre><code><span class="kw">Context:</span>
+  &lt;repository path, issue reference, logs, constraints&gt;
+
+<span class="kw">Task:</span>
+  &lt;what the AI should produce for this phase&gt;
+
+<span class="kw">Requirements:</span>
+  - Produce structured Markdown output
+  - State all assumptions explicitly
+  - Identify risks and mitigations
+  - Include recommended next steps
+  - Do not invent facts not present in the context
+
+<span class="kw">Output Format:</span>
+  &lt;table | checklist | ADR | PR summary | postmortem | …&gt;</code></pre>
+
+  <!-- ── CHECKLIST ── -->
+  <h2 id="checklist">Phase Checklists</h2>
+  <p>
+    Every phase has an entry checklist, an execution checklist, and an exit checklist.
+    These ensure the right inputs are ready before work starts and the right artifacts
+    exist before handing off to the next phase.
+  </p>
+
+  <h3>Opening a checklist</h3>
+  <p>Run <span class="cmd-pill">AI DevOps: Open Phase Checklist</span> from the Command Palette, or click the checklist icon next to a phase in the sidebar.</p>
+
+  <h3>Using the checklist panel</h3>
+  <ul>
+    <li>Check items off as you complete them. Progress is saved automatically.</li>
+    <li>The progress bar at the top shows how much of the phase is done.</li>
+    <li>Items marked as <em>required</em> must be completed before the phase can exit.</li>
+    <li>Use the <em>Reset</em> button to clear all items when starting a fresh iteration.</li>
+  </ul>
+
+  <div class="callout warn">
+    <div class="icon">⚠️</div>
+    <p><strong>Don't skip checklists.</strong> Exit criteria are the handoff contract between phases.
+    Skipping them is the most common cause of regressions and missed security gates.</p>
+  </div>
+
+  <!-- ── CUSTOM PROMPT ── -->
+  <h2 id="custom-prompt">Custom Prompts</h2>
+  <p>
+    Need to ask the AI something that doesn't fit the default phase prompt?
+    Use the custom prompt command to send any text to any phase's context.
+  </p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p>Run <span class="cmd-pill">AI DevOps: Run Custom Prompt</span> from the Command Palette.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p>A quick-pick menu lists all 11 phases. Select the phase most relevant to your question — this loads the right agent context.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p>Type your custom prompt in the input box and press Enter. The AI responds in the Phase Guide panel.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── AGENT AUTOMATION ── -->
+  <h2 id="agent">Agent Automation Flow</h2>
+  <p>
+    Agent automation lets you trigger a full structured AI workflow for a phase with
+    a specific <em>trigger</em> — for example, a new GitHub issue, a CI failure, or a
+    security alert.
+  </p>
+
+  <h3>How to run it</h3>
+  <p>Run <span class="cmd-pill">AI DevOps: Run Agent Automation Flow</span> from the Command Palette.</p>
+
+  <ol>
+    <li>Select the <strong>lifecycle phase</strong> (e.g., Code, Test, Security).</li>
+    <li>Select a <strong>trigger type</strong> matching the event (issue opened, CI failed, alert fired, …).</li>
+    <li>The extension builds an automation prompt that combines the phase spec, agent role, and trigger context, then runs it against your AI provider.</li>
+  </ol>
+
+  <h3>Trigger types</h3>
+  <table>
+    <thead>
+      <tr><th>Trigger</th><th>Typical phase</th><th>What the agent does</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>issue_opened</code></td><td>Plan</td><td>Converts the issue into user stories and acceptance criteria</td></tr>
+      <tr><td><code>pr_opened</code></td><td>Code / Review</td><td>Reviews the PR diff and generates structured feedback</td></tr>
+      <tr><td><code>ci_failed</code></td><td>Build / Test</td><td>Analyzes the failure log and proposes a fix</td></tr>
+      <tr><td><code>security_alert</code></td><td>Secure / Comply</td><td>Summarizes the finding and recommends remediation</td></tr>
+      <tr><td><code>deploy_complete</code></td><td>Deploy / Monitor</td><td>Validates SLOs and generates a deployment summary</td></tr>
+      <tr><td><code>incident_opened</code></td><td>Incident / Learn</td><td>Starts a probable timeline, RCA hypothesis, and action items</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── SCAFFOLD ── -->
+  <h2 id="scaffold">Scaffold Agent Artifacts</h2>
+  <p>
+    Each phase has a set of <em>required output artifacts</em> — documents that must exist
+    before the phase can hand off. Scaffolding creates stub files for all of them so you
+    never start from a blank page.
+  </p>
+
+  <h3>How to scaffold</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p>Run <span class="cmd-pill">AI DevOps: Scaffold Agent Artifacts</span> from the Command Palette.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p>Choose a lifecycle phase. The extension reads the phase spec to determine which output files are required.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p>Stub Markdown files are created at the correct paths inside your repository. Each file includes the phase objective, sections for output, risks, and approvals.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <p>A notification offers to open the first created file. Fill in the actual content by running the AI prompt for that phase.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <div class="icon">💡</div>
+    <p>The <strong>Requirements tab</strong> inside a Phase Guide also shows missing output files with a one-click <em>Create</em> button — a quicker alternative to scaffolding everything at once.</p>
+  </div>
+
+  <!-- ── WEBHOOK ── -->
+  <h2 id="webhook">Webhook Queue</h2>
+  <p>
+    The webhook queue lets GitHub Actions send events to a local file-based queue,
+    which the extension then processes to trigger the matching agent automation.
+    This enables a lightweight local automation loop without a cloud intermediary.
+  </p>
+
+  <h3>Setting up the queue</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Scaffold the GitHub workflows</h4>
+        <p>Run <span class="cmd-pill">AI DevOps: Scaffold GitHub Webhook Workflows</span>. This writes GitHub Actions YAML files under <code>.github/workflows/</code> that push events into the queue bridge endpoint.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Configure the bridge URL</h4>
+        <p>Set the <code>WEBHOOK_BRIDGE_URL</code> secret in your GitHub repository. The bridge writes incoming events as JSON files into a <code>.webhook-queue/</code> folder in your workspace.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Process queued events</h4>
+        <p>Run <span class="cmd-pill">AI DevOps: Process Webhook Queue</span>. The extension reads each queued event, identifies the matching phase and trigger, and runs the agent automation flow automatically. Output appears in the <em>AI DevOps Webhooks</em> output channel.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <div class="icon">⚠️</div>
+    <p>The webhook queue is designed for development and automation experimentation. For production workloads, use the GitHub Actions workflows directly with GitHub-managed runners.</p>
+  </div>
+
+  <!-- ── PR TEMPLATE ── -->
+  <h2 id="pr-template">PR Draft Generator</h2>
+  <p>
+    When the Code agent finishes implementing a feature, use the PR draft generator
+    to produce a governance-compliant pull request body ready to paste into GitHub.
+  </p>
+
+  <h3>How to generate a PR draft</h3>
+  <p>Run <span class="cmd-pill">AI DevOps: Generate CODE Agent PR Draft</span> from the Command Palette.</p>
+  <ol>
+    <li>Enter the <strong>issue or ticket reference</strong> (e.g., <code>#123</code> or <code>PROJ-456</code>).</li>
+    <li>Enter a short <strong>summary</strong> of what changed.</li>
+    <li>Select the <strong>AI tool</strong> that generated the code.</li>
+  </ol>
+
+  <p>The extension outputs a Markdown PR body containing:</p>
+  <ul>
+    <li>Summary and related issue link</li>
+    <li>Implementation detail checklist</li>
+    <li>Tests run checklist</li>
+    <li>Risk assessment (functional, security, operational)</li>
+    <li>Rollback notes</li>
+    <li>AI assistance disclosure</li>
+  </ul>
+
+  <div class="callout info">
+    <div class="icon">ℹ️</div>
+    <p>Every PR created by AI must include an <em>AI assistance</em> section disclosing which tool was used and which prompt was referenced. This keeps the audit trail complete.</p>
+  </div>
+
+  <!-- ── PHASES REFERENCE ── -->
+  <h2 id="phases-ref">All 11 Lifecycle Phases</h2>
+
+  <table>
+    <thead>
+      <tr><th>#</th><th>Phase</th><th>Primary AI role</th><th>Key outputs</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="phase-num">1</span></td>
+        <td><strong>Plan</strong></td>
+        <td>Planning agent (Claude recommended)</td>
+        <td>User stories, acceptance criteria, risk log, implementation sequence</td>
+      </tr>
+      <tr>
+        <td><span class="phase-num">2</span></td>
+        <td><strong>Design</strong></td>
+        <td>Architecture agent (Claude recommended)</td>
+        <td>Architecture options, ADR, API contract, threat model</td>
+      </tr>
+      <tr>
+        <td><span class="phase-num">3</span></td>
+        <td><strong>Code</strong></td>
+        <td>Coding agent (Codex/Copilot recommended)</td>
+        <td>Feature branch, PR with tests, implementation notes</td>
+      </tr>
+      <tr>
+        <td><span class="phase-num">4</span></td>
+        <td><strong>Build</strong></td>
+        <td>Build agent</td>
+        <td>Reproducible build, signed artifact, SBOM</td>
+      </tr>
+      <tr>
+        <td><span class="phase-num">5</span></td>
+        <td><strong>Test</strong></td>
+        <td>Test agent</td>
+        <td>Test results, coverage report, regression analysis</td>
+      </tr>
+      <tr>
+        <td><span class="phase-num">6</span></td>
+        <td><strong>Secure / Comply</strong></td>
+        <td>Security agent (Claude recommended)</td>
+        <td>SAST/SCA/secret-scan results, remediation plan, compliance sign-off</td>
+      </tr>
+      <tr>
+        <td><span class="phase-num">7</span></td>
+        <td><strong>Release</strong></td>
+        <td>Release agent</td>
+        <td>Release notes, changelog, go/no-go recommendation, approval record</td>
+      </tr>
+      <tr>
+        <td><span class="phase-num">8</span></td>
+        <td><strong>Deploy</strong></td>
+        <td>Deploy agent</td>
+        <td>Deployment record, rollback plan, environment validation</td>
+      </tr>
+      <tr>
+        <td><span class="phase-num">9</span></td>
+        <td><strong>Operate</strong></td>
+        <td>Ops agent</td>
+        <td>Config change log, access review, runbook update</td>
+      </tr>
+      <tr>
+        <td><span class="phase-num">10</span></td>
+        <td><strong>Monitor / Observe</strong></td>
+        <td>Observability agent (Claude recommended)</td>
+        <td>SLO validation report, alert quality review, capacity notes</td>
+      </tr>
+      <tr>
+        <td><span class="phase-num">11</span></td>
+        <td><strong>Incident / Learn</strong></td>
+        <td>Incident agent (Claude recommended)</td>
+        <td>Incident timeline, RCA, postmortem, action items backlog</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ── MATURITY ── -->
+  <h2 id="maturity">Automation Adoption Levels</h2>
+  <p>
+    The framework is designed to be adopted gradually. Match your team's current level
+    and expand autonomy only after validating the previous level.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Level</th><th>Name</th><th>What AI does</th><th>Human oversight</th></tr>
+    </thead>
+    <tbody>
+      <tr class="level-row level-l0">
+        <td><span class="level-badge level-l0">L0</span></td>
+        <td>Manual</td>
+        <td>Chat assistant only — no file changes</td>
+        <td>Full manual control</td>
+      </tr>
+      <tr class="level-row level-l1">
+        <td><span class="level-badge level-l1">L1</span></td>
+        <td>Assisted</td>
+        <td>Drafts plans, docs, prompts, checklists</td>
+        <td>Human reviews all drafts before use</td>
+      </tr>
+      <tr class="level-row level-l2">
+        <td><span class="level-badge level-l2">L2</span></td>
+        <td>PR Automation</td>
+        <td>Opens branches and PRs; human merges</td>
+        <td>Humans review and approve all merges</td>
+      </tr>
+      <tr class="level-row level-l3">
+        <td><span class="level-badge level-l3">L3</span></td>
+        <td>Self-Healing CI</td>
+        <td>Fixes build/test/lint failures via PRs</td>
+        <td>Humans merge; policy gates enforce quality</td>
+      </tr>
+      <tr class="level-row level-l4">
+        <td><span class="level-badge level-l4">L4</span></td>
+        <td>Staging Autonomy</td>
+        <td>Deploys to staging and validates automatically</td>
+        <td>Humans approve production promotion</td>
+      </tr>
+      <tr class="level-row level-l5">
+        <td><span class="level-badge level-l5">L5</span></td>
+        <td>Governed Production</td>
+        <td>Triggers production under strict policy gates</td>
+        <td>Policy gates; human on-call retains override</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <div class="icon">💡</div>
+    <p><strong>Recommended starting point:</strong> L1 for new teams; L2 as the steady-state default. Only advance to L5 after strong observability, tested rollback paths, and a mature incident process are in place.</p>
+  </div>
+
+  <!-- ── GOVERNANCE ── -->
+  <h2 id="governance">Governance Rules</h2>
+  <p>These seven rules are enforced by the framework's policies and must never be bypassed — not even temporarily.</p>
+
+  <ol>
+    <li><strong>AI must not push directly to protected branches.</strong> All changes go through pull requests.</li>
+    <li><strong>All code changes require a pull request</strong> — no direct commits to <code>main</code> or <code>release/*</code>.</li>
+    <li><strong>Production deployment uses protected environments</strong> with required reviewer approval gates.</li>
+    <li><strong>Secrets must never be exposed</strong> to AI prompts, logs, or output files.</li>
+    <li><strong>Every AI action must be traceable</strong> to an issue, PR, workflow run, or incident record.</li>
+    <li><strong>High-risk security findings require human security approval</strong> before remediation is merged.</li>
+    <li><strong>Rollback paths must be documented</strong> before a release or deployment proceeds.</li>
+  </ol>
+
+  <div class="callout danger">
+    <div class="icon">🚫</div>
+    <p>If an AI suggestion would violate any of these rules, reject it regardless of how convenient it seems. The traceability and approval model is what makes AI-assisted delivery safe at scale.</p>
+  </div>
+
+  <!-- ── COMMANDS REFERENCE ── -->
+  <h2 id="commands-ref">Command Reference</h2>
+
+  <table>
+    <thead>
+      <tr><th>Command</th><th>Palette name</th><th>What it does</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="cmd-pill">aiNativeDevOps.openPhase</span></td>
+        <td>AI DevOps: Open Phase Guide</td>
+        <td>Opens the phase webview with guide, requirements, prompt, and checklist tabs</td>
+      </tr>
+      <tr>
+        <td><span class="cmd-pill">aiNativeDevOps.runPrompt</span></td>
+        <td>AI DevOps: Run AI Prompt for Phase</td>
+        <td>Runs the default (or custom-augmented) phase prompt against the configured AI provider</td>
+      </tr>
+      <tr>
+        <td><span class="cmd-pill">aiNativeDevOps.openChecklist</span></td>
+        <td>AI DevOps: Open Phase Checklist</td>
+        <td>Opens the interactive phase checklist with persistent progress tracking</td>
+      </tr>
+      <tr>
+        <td><span class="cmd-pill">aiNativeDevOps.openDashboard</span></td>
+        <td>AI DevOps: Open AI DevOps Dashboard</td>
+        <td>Opens the phase guide for the current active phase</td>
+      </tr>
+      <tr>
+        <td><span class="cmd-pill">aiNativeDevOps.selectProvider</span></td>
+        <td>AI DevOps: Select AI Provider</td>
+        <td>Chooses Claude / OpenAI / Copilot and stores API key securely</td>
+      </tr>
+      <tr>
+        <td><span class="cmd-pill">aiNativeDevOps.runCustomPrompt</span></td>
+        <td>AI DevOps: Run Custom Prompt</td>
+        <td>Sends a free-text prompt in the context of a selected phase</td>
+      </tr>
+      <tr>
+        <td><span class="cmd-pill">aiNativeDevOps.runAgentAutomation</span></td>
+        <td>AI DevOps: Run Agent Automation Flow</td>
+        <td>Triggers a structured agent run for a phase + event trigger combination</td>
+      </tr>
+      <tr>
+        <td><span class="cmd-pill">aiNativeDevOps.scaffoldAgentArtifacts</span></td>
+        <td>AI DevOps: Scaffold Agent Artifacts</td>
+        <td>Creates stub output files for all required phase artifacts</td>
+      </tr>
+      <tr>
+        <td><span class="cmd-pill">aiNativeDevOps.processWebhookQueue</span></td>
+        <td>AI DevOps: Process Webhook Queue</td>
+        <td>Reads queued GitHub events and runs matching agent automations</td>
+      </tr>
+      <tr>
+        <td><span class="cmd-pill">aiNativeDevOps.scaffoldGithubWebhookWorkflows</span></td>
+        <td>AI DevOps: Scaffold GitHub Webhook Workflows</td>
+        <td>Writes GitHub Actions YAML files that feed events into the local webhook queue</td>
+      </tr>
+      <tr>
+        <td><span class="cmd-pill">aiNativeDevOps.generateCodePrTemplate</span></td>
+        <td>AI DevOps: Generate CODE Agent PR Draft</td>
+        <td>Produces a governance-compliant PR body for AI-generated code changes</td>
+      </tr>
+    </tbody>
+  </table>
+
+</main>
+
+<!-- ── Footer ── -->
+<footer>
+  <p>AI-Native DevOps v0.1.9 &nbsp;·&nbsp; MIT License &nbsp;·&nbsp;
+  Questions? Open an issue in the repository.</p>
+</footer>
+
+<script>
+  // Highlight active sidebar link based on scroll position
+  const sections = document.querySelectorAll('h2[id]');
+  const links = document.querySelectorAll('nav a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

@@ -44,6 +44,10 @@ Capture the incident, build RCA hypotheses, document lessons learned, and feed f
 - Postmortem authoring
 - Action item tracking
 
+## Recommended AI Provider
+
+**Claude** — timeline reasoning, causal analysis, structured postmortem writing, and backlog synthesis.
+
 ## AI And Automation Expectations
 
 - Build incident timeline and RCA hypotheses from evidence.

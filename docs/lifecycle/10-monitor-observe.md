@@ -35,6 +35,10 @@ Correlate telemetry, identify anomalies quickly, and prepare incident-ready moni
 - SLO tracking
 - Anomaly detection
 
+## Recommended AI Provider
+
+**Claude** — telemetry reasoning, anomaly pattern analysis, SLO interpretation, and causal linking.
+
 ## AI And Automation Expectations
 
 - Correlate alerts, metrics, logs, traces, and recent changes.

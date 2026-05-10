@@ -36,6 +36,10 @@ Implement approved scope with tests and a review-ready change package that satis
 - Code review preparation
 - PR authoring
 
+## Recommended AI Provider
+
+**GitHub Copilot or Codex** — code generation, test writing, and PR preparation.
+
 ## AI And Automation Expectations
 
 - Build an implementation plan from approved design.

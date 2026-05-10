@@ -37,6 +37,10 @@ Prioritize security and compliance findings, propose remediations, and document 
 - IaC validation
 - Compliance evidence review
 
+## Recommended AI Provider
+
+**Claude** — security reasoning, compliance analysis, risk ranking, and remediation prioritization.
+
 ## AI And Automation Expectations
 
 - Consolidate findings from scans and policy checks.

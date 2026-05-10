@@ -35,6 +35,10 @@ Improve day-2 operations with runbooks, low-risk action plans, operational safeg
 - Cost review
 - Change execution
 
+## Recommended AI Provider
+
+Any provider — operations analysis and runbook generation are well-supported by all.
+
 ## AI And Automation Expectations
 
 - Propose low-risk operational actions.

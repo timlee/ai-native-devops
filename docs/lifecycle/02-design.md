@@ -39,6 +39,10 @@ Translate approved planning intent into architecture, interfaces, decisions, and
 - Threat modeling
 - ADR authoring
 
+## Recommended AI Provider
+
+**Claude** — trade-off analysis, security modeling, API design, and decision rationale.
+
 ## AI And Automation Expectations
 
 - Summarize design constraints from planning and policy inputs.

@@ -35,6 +35,10 @@ Assemble a release package with changelog, risk summary, approvals, and a clear 
 - Approval review
 - Bundle preparation
 
+## Recommended AI Provider
+
+Any provider; **Claude** recommended for risk summary reasoning and go/no-go rationale.
+
 ## AI And Automation Expectations
 
 - Summarize release scope and included changes.
