@@ -35,6 +35,9 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.activate = activate;
 exports.deactivate = deactivate;
+const cp = __importStar(require("child_process"));
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 const vscode = __importStar(require("vscode"));
 const phases_1 = require("./phases");
 const lifecycleProvider_1 = require("./lifecycleProvider");
@@ -232,6 +235,10 @@ function activate(context) {
     vscode.commands.registerCommand("aiNativeDevOps.scaffoldGithubWebhookWorkflows", async () => {
         await scaffoldGithubWebhookWorkflows(context);
     }), 
+    // Run Plan + Design pipeline from a single requirements input
+    vscode.commands.registerCommand("aiNativeDevOps.runPlanDesignPipeline", async () => {
+        await runPlanDesignPipeline(context, aiRunner);
+    }), 
     // Generate PR draft body for CODE agent output
     vscode.commands.registerCommand("aiNativeDevOps.generateCodePrTemplate", async () => {
         const issueRef = await vscode.window.showInputBox({
@@ -356,6 +363,91 @@ function updateStatusBar(item) {
     }
 }
 function deactivate() { }
+// ── Plan & Design Pipeline ────────────────────────────────────────────────────
+async function runPlanDesignPipeline(context, aiRunner) {
+    const requirements = await vscode.window.showInputBox({
+        title: "Run Plan & Design Pipeline",
+        prompt: "Enter requirements — feature request, problem statement, or stakeholder brief",
+        placeHolder: "e.g. Add dark mode support to the VS Code extension webviews",
+        ignoreFocusOut: true,
+    });
+    if (!requirements?.trim()) {
+        return;
+    }
+    const repoRoot = (0, phasePanel_2.resolveRepoRoot)(context);
+    const planPhase = phases_1.PHASES.find(p => p.id === 1);
+    const designPhase = phases_1.PHASES.find(p => p.id === 2);
+    const planSpec = (0, agentAutomation_1.getAgentSpecByPhase)(1);
+    const designSpec = (0, agentAutomation_1.getAgentSpecByPhase)(2);
+    const planTrigger = planSpec.triggers.find(t => t.id === "issue_opened") ?? planSpec.triggers[0];
+    const designTrigger = designSpec.triggers[0];
+    await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Plan & Design Pipeline", cancellable: false }, async (progress) => {
+        // ── 01 · Plan ─────────────────────────────────────────────────────────
+        progress.report({ increment: 0, message: "01 · Plan — running PLAN agent…" });
+        const planPrompt = (0, agentAutomation_1.buildAutomationPrompt)(planPhase, planSpec, planTrigger, requirements.trim(), (0, phasePanel_2.readPhaseRequirements)(repoRoot, planPhase));
+        let planOutput = "";
+        const planPanel = phasePanel_1.PhasePanel.show(planPhase, context, (ph, pr, pnl) => aiRunner.run(ph, pr ?? "", pnl));
+        await aiRunner.run(planPhase, planPrompt, captureSink(planPanel, c => { planOutput += c; }));
+        (0, phasePanel_2.ensureTextFile)(repoRoot, "plan/01-plan-output.md", planOutput);
+        // ── 02 · Design ───────────────────────────────────────────────────────
+        progress.report({ increment: 50, message: "02 · Design — running DESIGN agent…" });
+        const designContext = [
+            "Requirements:\n" + requirements.trim(),
+            "",
+            "Plan output (from 01 · Plan phase):\n" + planOutput,
+        ].join("\n");
+        const designPrompt = (0, agentAutomation_1.buildAutomationPrompt)(designPhase, designSpec, designTrigger, designContext, (0, phasePanel_2.readPhaseRequirements)(repoRoot, designPhase));
+        let designOutput = "";
+        const designPanel = phasePanel_1.PhasePanel.show(designPhase, context, (ph, pr, pnl) => aiRunner.run(ph, pr ?? "", pnl));
+        await aiRunner.run(designPhase, designPrompt, captureSink(designPanel, c => { designOutput += c; }));
+        (0, phasePanel_2.ensureTextFile)(repoRoot, "plan/02-design-output.md", designOutput);
+        // ── Build .vsix ───────────────────────────────────────────────────────
+        progress.report({ increment: 90, message: "Building .vsix package…" });
+        let newVersion = "<build-failed>";
+        try {
+            newVersion = await bumpAndPackage(context.extensionPath);
+        }
+        catch (err) {
+            vscode.window.showWarningMessage(`Artifacts saved — .vsix build failed: ${String(err)}`);
+        }
+        progress.report({ increment: 100, message: "Done." });
+        const choice = await vscode.window.showInformationMessage(`Pipeline complete — ai-native-devops-${newVersion}.vsix generated`, "Open Plan Output", "Open Design Output");
+        const target = choice === "Open Plan Output" ? path.join(repoRoot, "plan/01-plan-output.md") :
+            choice === "Open Design Output" ? path.join(repoRoot, "plan/02-design-output.md") :
+                undefined;
+        if (target) {
+            const doc = await vscode.workspace.openTextDocument(target);
+            await vscode.window.showTextDocument(doc);
+        }
+    });
+}
+function captureSink(delegate, onChunk) {
+    return {
+        appendAiChunk(chunk) { onChunk(chunk); delegate.appendAiChunk(chunk); },
+        aiDone() { delegate.aiDone(); },
+        aiError(msg) { delegate.aiError(msg); },
+    };
+}
+async function bumpAndPackage(extensionPath) {
+    const pkgPath = path.join(extensionPath, "package.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+    const parts = pkg.version.split(".").map(Number);
+    parts[2] += 1;
+    const newVersion = parts.join(".");
+    pkg.version = newVersion;
+    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+    await new Promise((resolve, reject) => {
+        cp.exec("npm run package", { cwd: extensionPath }, (err, _stdout, stderr) => {
+            if (err) {
+                reject(new Error(stderr || err.message));
+            }
+            else {
+                resolve();
+            }
+        });
+    });
+    return newVersion;
+}
 async function pickTrigger(triggers) {
     const picked = await vscode.window.showQuickPick(triggers.map((t) => ({
         label: t.label,
