@@ -1,15 +1,12 @@
 # User Stories
 
-> Module: Auth | ID: REQ-001
+> Module: Auth | ID: REQ-003
 
-- As a **software architect**, I want to fetch GitHub issues into the Design phase tool, so that I can use real requirements as input for artifact generation without manual copy-paste.
-- As a **software architect**, I want to select a specific GitHub issue from a list, so that I can scope artifact generation to a single, well-defined requirement.
-- As a **software architect**, I want to automatically generate an architecture diagram from a selected issue, so that I can visualize system structure early in the design phase.
-- As a **software architect**, I want to generate an ADR from a selected issue, so that I can document design decisions with full traceability to requirements.
-- As a **software architect**, I want to generate an OpenAPI spec from a selected issue, so that I can bootstrap API contracts before implementation begins.
-- As a **software architect**, I want to generate a data model from a selected issue, so that I can define schema and entity relationships aligned to requirements.
-- As a **software architect**, I want to generate a STRIDE threat model from a selected issue, so that I can identify security risks at design time rather than post-deployment.
-- As a **security engineer**, I want GitHub credentials to be stored securely and never logged, so that the organization's repositories are not exposed to credential leakage.
-- As a **team lead**, I want all generated artifacts to reference the originating issue ID, so that I can audit and trace design decisions back to requirements.
+- As a **registered user**, I want to log in with my email and password, so that I can access protected resources securely.
+- As a **registered user**, I want my session to be refreshed automatically using a refresh token, so that I am not forced to re-authenticate frequently.
+- As a **security administrator**, I want accounts to be locked after repeated failed login attempts, so that brute-force attacks are mitigated.
+- As a **registered user**, I want to log out and have my tokens invalidated immediately, so that my session cannot be hijacked after logout.
+- As a **downstream service**, I want to introspect a JWT to verify its validity, so that I can authorize requests without coupling to the auth secret.
+- As a **security auditor**, I want all auth events logged with timestamps and actor identity, so that I can investigate incidents.
 
 ---

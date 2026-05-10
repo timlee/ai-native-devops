@@ -1,13 +1,219 @@
-openapi: 3.0.3
+# OpenAPI Spec
+
+> Module: Auth | ID: REQ-003
+
+```yaml
+openapi: 3.1.0
 info:
-  title: AI Native DevOps API
-  version: 0.1.0
+  title: Auth Module API
+  version: 1.0.0
+  description: Secure authentication, token lifecycle, and introspection — REQ-003
+
 servers:
-  - url: https://api.example.com
+  - url: https://api.example.com/auth
+
 paths:
-  /health:
-    get:
-      summary: Health check
+  /login:
+    post:
+      operationId: login
+      summary: Authenticate user and issue tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
-          description: Service is healthy
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '423':
+          description: Account locked
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until lockout expires
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Bad request or plain HTTP rejected
+
+  /logout:
+    post:
+      operationId: logout
+      summary: Invalidate access and refresh tokens
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '204':
+          description: Successfully logged out
+        '401':
+          description: Unauthorized
+
+  /refresh:
+    post:
+      operationId: refreshToken
+      summary: Rotate refresh token and issue new access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New token pair issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Refresh token invalid, expired, or already used
+
+  /introspect:
+    post:
+      operationId: introspectToken
+      summary: Validate a JWT (RFC 7662)
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Introspection result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntrospectionResponse'
+
+  /.well-known/jwks.json:
+    get:
+      operationId: getJwks
+      summary: Retrieve public keys for JWT verification
+      responses:
+        '200':
+          description: JWKS document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JwksResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    basicAuth:
+      type: http
+      scheme: basic
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          writeOnly: true
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+          type: integer
+          description: Access token TTL in seconds
+        refresh_token:
+          type: string
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    LogoutRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    IntrospectionResponse:
+      type: object
+      required: [active]
+      properties:
+        active:
+          type: boolean
+        sub:
+          type: string
+        exp:
+          type: integer
+        iat:
+          type: integer
+        jti:
+          type: string
+        email:
+          type: string
+
+    JwksResponse:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            properties:
+              kty: { type: string }
+              use: { type: string }
+              kid: { type: string }
+              alg: { type: string }
+              n:   { type: string }
+              e:   { type: string }
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        error_description:
+          type: string
+```
+
+---

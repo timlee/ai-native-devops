@@ -410,6 +410,12 @@ class RequirementPanel {
         const writtenDesign = writeDesignFiles(this._repoRoot, moduleName, reqId, artifacts);
         this._panel.webview.postMessage({ command: "filesReady", files: writtenDesign, phase: "design" });
         this._step = "complete";
+        const title = `[${reqId}] ${moduleName}`;
+        const choice = await vscode.window.showInformationMessage(`Create GitHub Issue: "${title}"?`, { modal: true }, "Create", "Cancel");
+        if (choice !== "Create") {
+            this._panel.webview.postMessage({ command: "issueCancelled" });
+            return;
+        }
         try {
             const cfg = vscode.workspace.getConfiguration("aiNativeDevOps");
             let owner = cfg.get("githubOwner", "").trim();
@@ -424,14 +430,18 @@ class RequirementPanel {
                 repo = info.repo;
             }
             const token = await getGithubToken();
-            const title = `[${reqId}] ${moduleName}`;
             const body = buildIssueBody(moduleName, reqId, this._workflowCtx.requirements, artifacts);
             const { url, number } = await createGithubIssue(token, owner, repo, title, body, ["requirement", "design", "ai-generated"]);
             this._panel.webview.postMessage({ command: "issueReady", url, number });
+            const action = await vscode.window.showInformationMessage(`GitHub Issue #${number} created successfully.`, "Open Issue");
+            if (action === "Open Issue") {
+                vscode.env.openExternal(vscode.Uri.parse(url));
+            }
         }
         catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             this._panel.webview.postMessage({ command: "issueError", text: message });
+            vscode.window.showErrorMessage(`Failed to create GitHub Issue: ${message}`);
         }
     }
     async _openFile(relativePath) {
@@ -873,6 +883,9 @@ class RequirementPanel {
       sec.style.borderLeft = '3px solid var(--vscode-errorForeground)';
       document.getElementById('issueLabel').textContent = 'GitHub Issue — Not Created';
       document.getElementById('issueContent').textContent = msg.text;
+      document.getElementById('createIssueBtn').disabled = false;
+
+    } else if (msg.command === 'issueCancelled') {
       document.getElementById('createIssueBtn').disabled = false;
     }
   });

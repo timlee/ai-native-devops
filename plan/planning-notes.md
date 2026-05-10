@@ -1,6 +1,6 @@
 # Planning Notes
 
-> Module: Auth | ID: REQ-001
+> Module: Auth | ID: REQ-003
 
 ## Assumptions
 
