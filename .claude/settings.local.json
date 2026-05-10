@@ -11,7 +11,8 @@
       "Bash(Select-Object -First 100)",
       "Bash(Get-ChildItem -Path . -Depth 0)",
       "Bash(Select-Object Name, Mode)",
-      "Bash(npx vsce *)"
+      "Bash(npx vsce *)",
+      "Bash(npm version *)"
     ]
   }
 }

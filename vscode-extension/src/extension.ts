@@ -402,7 +402,7 @@ export function activate(context: vscode.ExtensionContext) {
 function pickCurrentPhase(): Phase | undefined {
   const id = vscode.workspace
     .getConfiguration("aiNativeDevOps")
-    .get<number>("currentPhase", 1);
+    .get<number>("currentPhase", 0);
   return PHASES.find((p) => p.id === id);
 }
 
@@ -454,7 +454,7 @@ async function runPlanDesignPipeline(
   if (!requirements?.trim()) { return; }
 
   const repoRoot = resolveRepoRoot(context);
-  const planPhase   = PHASES.find(p => p.id === 1)!;
+  const planPhase   = PHASES.find(p => p.id === 0)!;
   const designPhase = PHASES.find(p => p.id === 2)!;
   const planSpec    = getAgentSpecByPhase(1)!;
   const designSpec  = getAgentSpecByPhase(2)!;

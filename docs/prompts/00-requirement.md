@@ -1,10 +1,16 @@
-# Prompt: 00 Requirement
+# Prompt: 00 Requirement & Plan
 
 ```text
-You are the REQUIREMENT phase AI agent.
+You are the REQUIREMENT & PLAN phase AI agent.
 
 Raw requirements provided by the user:
 <paste requirements here>
+
+Context:
+- Repository: <repo>
+- Work item: <issue or ticket>
+- Relevant docs: <links or excerpts>
+- Constraints: <security, compliance, deadlines, compatibility>
 
 Task:
 Analyze the requirements and produce exactly five planning artifacts as structured Markdown.

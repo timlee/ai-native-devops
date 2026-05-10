@@ -294,6 +294,7 @@ class RequirementPanel {
         this._aiRunner = _aiRunner;
         this._rawOutput = "";
         this._step = "input";
+        this._cancelled = false;
         this._workflowCtx = { moduleName: "", reqId: "", description: "" };
         this._repoRoot = "";
         this._disposables = [];
@@ -309,6 +310,9 @@ class RequirementPanel {
                     break;
                 case "confirmDesign":
                     this._handleConfirmDesign(msg);
+                    break;
+                case "goBack":
+                    this._handleGoBack(msg.fromStep ?? "");
                     break;
                 case "openFile":
                     this._openFile(msg.text ?? "");
@@ -344,10 +348,16 @@ class RequirementPanel {
         const prompt = buildPrompt(this._workflowCtx.moduleName, this._workflowCtx.reqId, this._workflowCtx.description);
         const sink = {
             appendAiChunk: (chunk) => {
+                if (this._cancelled) {
+                    return;
+                }
                 this._rawOutput += chunk;
                 this._panel.webview.postMessage({ command: "appendChunk", text: chunk });
             },
             aiDone: () => {
+                if (this._cancelled) {
+                    return;
+                }
                 const sections = parseSections(this._rawOutput);
                 const artifacts = {
                     productRequirements: sections.get("Product Requirements") ?? "",
@@ -360,10 +370,24 @@ class RequirementPanel {
                 this._panel.webview.postMessage({ command: "aiDone", artifacts });
             },
             aiError: (msg) => {
+                if (this._cancelled) {
+                    return;
+                }
                 this._panel.webview.postMessage({ command: "aiError", text: msg });
             },
         };
         await this._aiRunner.run(this._phase, prompt, sink);
+    }
+    _handleGoBack(fromStep) {
+        this._cancelled = true;
+        this._rawOutput = "";
+        if (fromStep === "review-requirements") {
+            this._step = "input";
+        }
+        else {
+            this._step = "review-requirements";
+        }
+        setImmediate(() => { this._cancelled = false; });
     }
     async _handleConfirmRequirements(artifacts) {
         this._workflowCtx.requirements = artifacts;
@@ -382,10 +406,16 @@ class RequirementPanel {
         const prompt = buildDesignPrompt(moduleName, reqId, this._workflowCtx.description, artifacts);
         const sink = {
             appendAiChunk: (chunk) => {
+                if (this._cancelled) {
+                    return;
+                }
                 this._rawOutput += chunk;
                 this._panel.webview.postMessage({ command: "appendChunk", text: chunk });
             },
             aiDone: () => {
+                if (this._cancelled) {
+                    return;
+                }
                 const secs = parseSections(this._rawOutput);
                 const designArtifacts = {
                     architectureDiagram: secs.get("Architecture Diagram") ?? "",
@@ -399,6 +429,9 @@ class RequirementPanel {
                 this._panel.webview.postMessage({ command: "aiDone", artifacts: designArtifacts, step: "review-design" });
             },
             aiError: (msg) => {
+                if (this._cancelled) {
+                    return;
+                }
                 this._panel.webview.postMessage({ command: "aiError", text: msg });
             },
         };
@@ -502,6 +535,16 @@ class RequirementPanel {
   }
   button.primary:hover { background: var(--vscode-button-hoverBackground); }
   button.primary:disabled { opacity: 0.5; cursor: default; }
+  button.secondary {
+    padding: 8px 16px;
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none; border-radius: 3px; cursor: pointer;
+    font-size: 0.95em; margin-top: 4px;
+  }
+  button.secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
+  button.secondary:disabled { opacity: 0.5; cursor: default; }
+  .button-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
   .divider { border: none; border-top: 1px solid var(--vscode-panel-border, #444); margin: 20px 0; }
   button.link-btn {
     background: none; border: none; padding: 0;
@@ -664,7 +707,10 @@ class RequirementPanel {
       <label class="artifact-label" for="ta-planningNotes">Planning Notes</label>
       <textarea class="artifact-ta" id="ta-planningNotes" placeholder="Add assumptions, risks, open questions, dependencies…"></textarea>
     </div>
-    <button class="primary" id="confirmReqBtn" onclick="confirmRequirements()">Confirm &amp; Continue</button>
+    <div class="button-row">
+      <button class="secondary" id="backFromStep2Btn" onclick="goBackFromStep2()">&#8592; Back</button>
+      <button class="primary" id="confirmReqBtn" onclick="confirmRequirements()">Confirm &amp; Continue</button>
+    </div>
   </div>
 </section>
 
@@ -674,6 +720,9 @@ class RequirementPanel {
     <span class="spinner"></span><span>Generating design artifacts from confirmed requirements…</span>
   </div>
   <pre id="designOutputPre" class="output-pre" style="display:none"></pre>
+  <div class="button-row" style="margin-top:12px">
+    <button class="secondary" id="backFromStep3Btn" onclick="goBackFromStep3()">&#8592; Back to Requirements</button>
+  </div>
 </section>
 
 <!-- Step 4: Review Design + Publish -->
@@ -699,7 +748,10 @@ class RequirementPanel {
     <label class="artifact-label" for="ta-threatModel">Threat Model</label>
     <textarea class="artifact-ta" id="ta-threatModel"></textarea>
   </div>
-  <button class="primary" id="createIssueBtn" onclick="confirmDesign()">Create GitHub Issue</button>
+  <div class="button-row">
+    <button class="secondary" id="backFromStep4Btn" onclick="goBackFromStep4()">&#8592; Back to Requirements</button>
+    <button class="primary" id="createIssueBtn" onclick="confirmDesign()">Create GitHub Issue</button>
+  </div>
 
   <div id="filesSection">
     <hr class="divider">
@@ -724,6 +776,7 @@ class RequirementPanel {
     [1,2,3,4].forEach(i => {
       const dot = document.getElementById('step-dot-' + i);
       dot.classList.toggle('active', i === n);
+      if (i === n) { dot.classList.remove('done'); }
     });
   }
 
@@ -762,6 +815,7 @@ class RequirementPanel {
 
   function confirmDesign() {
     document.getElementById('createIssueBtn').disabled = true;
+    document.getElementById('backFromStep4Btn').disabled = true;
     vscode.postMessage({
       command: 'confirmDesign',
       architectureDiagram: document.getElementById('ta-architectureDiagram').value,
@@ -770,6 +824,58 @@ class RequirementPanel {
       dataModel:           document.getElementById('ta-dataModel').value,
       threatModel:         document.getElementById('ta-threatModel').value,
     });
+  }
+
+  function unmarkStepDone(n) {
+    const dot = document.getElementById('step-dot-' + n);
+    dot.classList.remove('done', 'active');
+    document.getElementById('step-num-' + n).textContent = String(n);
+  }
+
+  function goBackFromStep2() {
+    unmarkStepDone(1);
+    showSection(1);
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('reqSpinner').style.display = 'flex';
+    document.getElementById('reqOutputPre').style.display = 'none';
+    document.getElementById('reqOutputPre').textContent = '';
+    document.getElementById('reqReviewArea').style.display = 'none';
+    rawOutput = ''; activeOutputPre = null;
+    vscode.postMessage({ command: 'goBack', fromStep: 'review-requirements' });
+  }
+
+  function goBackFromStep3() {
+    unmarkStepDone(2);
+    showSection(2);
+    document.getElementById('reqSpinner').style.display = 'none';
+    document.getElementById('reqOutputPre').style.display = 'none';
+    document.getElementById('reqReviewArea').style.display = '';
+    document.getElementById('confirmReqBtn').disabled = false;
+    document.getElementById('designSpinner').style.display = 'flex';
+    document.getElementById('designOutputPre').style.display = 'none';
+    document.getElementById('designOutputPre').textContent = '';
+    rawOutput = ''; activeOutputPre = null;
+    vscode.postMessage({ command: 'goBack', fromStep: 'gen-design' });
+  }
+
+  function goBackFromStep4() {
+    unmarkStepDone(3);
+    unmarkStepDone(2);
+    showSection(2);
+    document.getElementById('reqSpinner').style.display = 'none';
+    document.getElementById('reqOutputPre').style.display = 'none';
+    document.getElementById('reqReviewArea').style.display = '';
+    document.getElementById('confirmReqBtn').disabled = false;
+    document.getElementById('filesSection').style.display = 'none';
+    document.getElementById('fileList').innerHTML = '';
+    document.getElementById('issueSection').style.display = 'none';
+    document.getElementById('issueSection').style.borderLeft = '';
+    document.getElementById('issueLabel').textContent = '';
+    document.getElementById('issueContent').innerHTML = '';
+    document.getElementById('createIssueBtn').disabled = false;
+    document.getElementById('backFromStep4Btn').disabled = false;
+    rawOutput = ''; activeOutputPre = null;
+    vscode.postMessage({ command: 'goBack', fromStep: 'review-design' });
   }
 
   document.addEventListener('keydown', e => {
@@ -874,6 +980,7 @@ class RequirementPanel {
       document.getElementById('issueLabel').textContent = 'GitHub Issue — Not Created';
       document.getElementById('issueContent').textContent = msg.text;
       document.getElementById('createIssueBtn').disabled = false;
+      document.getElementById('backFromStep4Btn').disabled = false;
     }
   });
 </script>

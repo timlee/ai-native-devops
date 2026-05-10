@@ -1,8 +1,8 @@
-# REQUIREMENT Phase Guidelines
+# REQUIREMENT & PLAN Phase Guidelines
 
 ## Objective
 
-The REQUIREMENT phase converts raw stakeholder input into five structured planning artifacts that feed directly into the PLAN phase.
+The REQUIREMENT & PLAN phase converts raw stakeholder input into five structured planning artifacts using AI agents and deterministic DevOps tooling to drive speed, quality, reliability, and traceability.
 
 ## Core Activities
 
@@ -11,6 +11,8 @@ The REQUIREMENT phase converts raw stakeholder input into five structured planni
 - Backlog decomposition
 - User story authoring
 - Acceptance criteria definition
+- Effort and risk estimation
+- Backlog prioritization
 - Planning notes and risk capture
 
 ## Key Artifacts and Work Products
@@ -30,15 +32,18 @@ AI tools such as Claude, Codex, GitHub Copilot, and internal agents should be us
 3. Decompose requirements into backlog items with labels and effort estimates.
 4. Write user stories in "As a / I want / So that" format.
 5. Define measurable acceptance criteria tied to each story.
-6. Record planning notes: assumptions, risks, open questions, and dependencies.
+6. Summarize context from issues, pull requests, logs, docs, and previous decisions.
+7. Identify missing requirements, risks, edge cases, and dependencies.
+8. Produce implementation, testing, security, or operational recommendations.
+9. Record planning notes: assumptions, risks, open questions, and dependencies.
 
 ## Recommended Agent Responsibilities
 
 | Agent Type | Responsibility |
 |---|---|
-| Claude | Reasoning, clarification, drafting all five artifacts |
+| Claude | Reasoning, clarification, analysis, drafting all artifacts, trade-off review |
 | Codex | Translating requirements into implementation tasks |
-| GitHub Copilot | IDE-level suggestions during story authoring |
+| GitHub Copilot | IDE-level suggestions during story authoring and PR assistance |
 | Internal Agent | Organization-specific intake templates and tooling |
 
 ## Required Controls
@@ -47,14 +52,21 @@ AI tools such as Claude, Codex, GitHub Copilot, and internal agents should be us
 - Production-impacting changes require approval gates.
 - Security and compliance exceptions must be documented.
 - Generated outputs must be reviewed for correctness and completeness.
+- AI assumptions are documented and validated.
 
 ## Example Prompt
 
 ```text
-You are the REQUIREMENT phase AI agent.
+You are the REQUIREMENT & PLAN phase AI agent.
 
 Raw requirements provided by the user:
 <paste requirements here>
+
+Context:
+- Repository: <repo>
+- Work item: <issue or ticket>
+- Relevant docs: <links or excerpts>
+- Constraints: <security, compliance, deadlines, compatibility>
 
 Task:
 Analyze the requirements and produce exactly five planning artifacts as structured Markdown.
@@ -74,4 +86,4 @@ Output as structured Markdown only.
 - Required artifacts are complete (all five files written to plan/).
 - Quality gates for this phase are satisfied.
 - Risks are documented or accepted.
-- Handoff to the PLAN phase is clear.
+- Handoff to the DESIGN phase is clear.

@@ -5,22 +5,12 @@ exports.PHASES = [
     {
         id: 0,
         key: "requirement",
-        label: "00 · Requirement",
+        label: "01 · Plan",
         icon: "$(list-ordered)",
         lifecycleFile: "docs/lifecycle/00-requirement.md",
         promptFile: "docs/prompts/00-requirement.md",
         checklistFile: "docs/checklists/00-requirement-checklist.md",
         agentFile: "docs/agents/requirement-agent.md",
-    },
-    {
-        id: 1,
-        key: "plan",
-        label: "01 · Plan",
-        icon: "$(milestone)",
-        lifecycleFile: "docs/lifecycle/01-plan.md",
-        promptFile: "docs/prompts/01-plan.md",
-        checklistFile: "docs/checklists/01-plan-checklist.md",
-        agentFile: "docs/agents/planning-agent.md",
     },
     {
         id: 2,
