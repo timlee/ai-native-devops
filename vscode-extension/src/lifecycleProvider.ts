@@ -27,10 +27,11 @@ export class LifecycleTreeItem extends vscode.TreeItem {
       this.iconPath = new vscode.ThemeIcon("circle-outline");
     }
 
-    this.command =
-      phase.id === 0
-        ? { command: "aiNativeDevOps.openRequirement", title: "Open Requirement Panel", arguments: [phase] }
-        : { command: "aiNativeDevOps.openPhase", title: "Open Phase Guide", arguments: [phase] };
+    this.command = {
+      command: "aiNativeDevOps.openPhase",
+      title: "Open Phase Guide",
+      arguments: [phase],
+    };
   }
 }
 

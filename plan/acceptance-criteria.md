@@ -1,37 +1,43 @@
 # Acceptance Criteria
 
-> Module: Auth | ID: REQ-003
+> Module: Auth | ID: REQ-001
 
-- [ ] **Login**
-  - [ ] Returns `200 OK` with `access_token` (JWT RS256) and `refresh_token` on valid credentials.
-  - [ ] Returns `401 Unauthorized` with no token on invalid credentials.
-  - [ ] Response time is ≤ 300 ms at p95 under nominal load.
+- [ ] **GitHub Integration**
+  - [ ] The tool authenticates to GitHub using a token retrieved from a secrets manager (e.g., Azure Key Vault, HashiCorp Vault, AWS Secrets Manager).
+  - [ ] The tool fetches all open issues from a configured repository without hard-coding credentials.
+  - [ ] Rate-limit headers (`X-RateLimit-Remaining`) are respected; requests are retried with exponential back-off when limits are approached.
 
-- [ ] **Token Expiry & Refresh**
-  - [ ] Access token expires within the configured TTL (default: 15 minutes).
-  - [ ] Refresh token is invalidated after first use; reuse returns `401`.
-  - [ ] New access token and rotated refresh token are issued on valid refresh request.
+- [ ] **Issue Selection**
+  - [ ] A list of issues is rendered with at minimum: issue number, title, labels, and truncated body.
+  - [ ] The user can select exactly one issue to proceed to artifact generation.
+  - [ ] The selected issue's full body and metadata are passed as context to the AI generation pipeline.
 
-- [ ] **Account Lockout**
-  - [ ] Account is locked after exactly 5 failed attempts within 15 minutes.
-  - [ ] Locked account returns `423 Locked` with a `Retry-After` header.
-  - [ ] Lockout state persists across service restarts (stored in durable cache/DB).
+- [ ] **Architecture Diagram Generation**
+  - [ ] A C4-level or equivalent diagram is generated in a renderable format (e.g., Mermaid, PlantUML, or PNG).
+  - [ ] The diagram references the selected issue ID in its metadata or filename.
 
-- [ ] **Logout**
-  - [ ] Returns `204 No Content` and blocklists the access token and refresh token immediately.
-  - [ ] Introspection of blocklisted token returns `{ "active": false }`.
+- [ ] **ADR Generation**
+  - [ ] An ADR is generated following a standard template (Title, Status, Context, Decision, Consequences).
+  - [ ] The ADR includes the GitHub issue URL in the `Context` section.
 
-- [ ] **Token Introspection**
-  - [ ] Returns `{ "active": true, ... claims }` for a valid, non-expired token.
-  - [ ] Returns `{ "active": false }` for expired, revoked, or malformed tokens.
+- [ ] **OpenAPI Spec Generation**
+  - [ ] A valid OpenAPI 3.1 YAML/JSON file is generated and passes schema validation (e.g., `spectral lint`).
+  - [ ] The spec includes `info.description` referencing the originating issue ID.
 
-- [ ] **Audit Logging**
-  - [ ] Every auth event includes: `event_type`, `user_id`, `ip_address`, `timestamp` (ISO 8601), `outcome`.
-  - [ ] Logs are written to the centralized logging sink within 1 second of the event.
+- [ ] **Data Model Generation**
+  - [ ] A data model is generated in at least one of: ERD (Mermaid), JSON Schema, or Prisma schema format.
+  - [ ] All entities defined in the model are traceable to terms in the issue description.
 
-- [ ] **Security**
-  - [ ] All endpoints reject plain HTTP with `301` redirect or `400`.
-  - [ ] Passwords verified against bcrypt hash with cost ≥ 12.
-  - [ ] No secrets or PII appear in logs or error response bodies.
+- [ ] **Threat Model Generation**
+  - [ ] A STRIDE-based threat model is generated covering at minimum the components identified in the architecture diagram.
+  - [ ] Each identified threat includes: Category, Description, Affected Component, Mitigation.
+
+- [ ] **Access Control**
+  - [ ] Only users with the `design:write` role (or equivalent) can trigger artifact generation.
+  - [ ] Unauthorized attempts return a `403 Forbidden` response with a structured error message.
+
+- [ ] **Traceability & Persistence**
+  - [ ] All five artifacts are saved with filenames or metadata containing the GitHub issue ID.
+  - [ ] A manifest file (JSON/YAML) is produced per generation run listing all artifacts, their paths, and the source issue URL.
 
 ---
