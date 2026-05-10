@@ -70,7 +70,7 @@ class AiRunner {
         if (!apiKey) {
             throw new Error("No Anthropic API key found. Run 'AI DevOps: Select AI Provider' to set it.");
         }
-        const model = cfg.get("claudeModel", "claude-3-5-sonnet-20241022");
+        const model = cfg.get("claudeModel", "claude-sonnet-4-6");
         // Dynamic import so the extension doesn't fail to activate if the SDK
         // is not installed (users who don't need Claude).
         let Anthropic;

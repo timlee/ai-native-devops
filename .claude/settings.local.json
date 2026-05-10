@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npm run *)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\wtlee\\\\Documents\\\\GitHub\\\\ai-native-devops\" -Directory)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Bash(cd /c/Users/wtlee/Documents/GitHub/ai-native-devops/vscode-extension && find . -type f -o -type d | head -100)",
+      "Read(//c/c/Users/wtlee/Documents/GitHub/ai-native-devops/**)",
+      "Bash(grep -E '\\\\.\\(ts|json|js|lock\\)$|^total')"
     ]
   }
 }
