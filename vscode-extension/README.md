@@ -42,19 +42,7 @@ Use the included webhook workflows and issue routing helpers to connect GitHub e
 
 ## Screenshots
 
-Replace these placeholders with captured VS Code screenshots from the extension itself.
-
-| Lifecycle Sidebar | Phase Panel | Checklist Panel |
-|---|---|---|
-| ![AI-Native DevOps sidebar placeholder](media/screenshot-sidebar-placeholder.svg) | ![Phase webview placeholder](media/screenshot-phase-panel-placeholder.svg) | ![Checklist panel placeholder](media/screenshot-checklist-placeholder.svg) |
-
-### Updating These Images
-
-1. Capture the sidebar, phase panel, and checklist panel in VS Code.
-2. Save the final images in `media/` with the suggested file names from `media/README.md`.
-3. Replace the placeholder SVG files or swap the image links in this table.
-4. Keep the captures dark-theme friendly and avoid cropping controls or status text.
-5. Repackage the extension after updating the README assets if you are preparing a release.
+Screenshots coming soon. To add them: capture the sidebar, phase panel, and checklist panel in VS Code, save as PNG files in `media/`, and add image references here.
 
 ## Demo
 
