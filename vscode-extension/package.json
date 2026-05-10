@@ -2,7 +2,7 @@
   "name": "ai-native-devops",
   "displayName": "AI-Native DevOps",
   "description": "Guide software development through the 11-phase AI-native DevOps lifecycle using Claude, Codex, or GitHub Copilot APIs",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "publisher": "ai-native-devops",
   "license": "MIT",
   "repository": {
@@ -35,6 +35,9 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "authentication": [
+      { "id": "github", "label": "GitHub" }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -190,6 +193,16 @@
           "type": "boolean",
           "default": true,
           "description": "If true, the phase panel is opened while processing webhook events."
+        },
+        "aiNativeDevOps.githubOwner": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub repository owner for issue creation. Auto-detected from git remote if empty."
+        },
+        "aiNativeDevOps.githubRepo": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub repository name for issue creation. Auto-detected from git remote if empty."
         }
       }
     },
