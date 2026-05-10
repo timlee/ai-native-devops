@@ -11,16 +11,6 @@ export interface Phase {
 
 export const PHASES: Phase[] = [
   {
-    id: 0,
-    key: "requirement",
-    label: "00 · Requirement",
-    icon: "$(list-ordered)",
-    lifecycleFile: "docs/lifecycle/00-requirement.md",
-    promptFile: "docs/prompts/00-requirement.md",
-    checklistFile: "docs/checklists/00-requirement-checklist.md",
-    agentFile: "docs/agents/requirement-agent.md",
-  },
-  {
     id: 1,
     key: "plan",
     label: "01 · Plan",

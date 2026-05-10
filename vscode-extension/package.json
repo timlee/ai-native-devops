@@ -2,7 +2,7 @@
   "name": "ai-native-devops",
   "displayName": "AI-Native DevOps",
   "description": "Guide software development through the 11-phase AI-native DevOps lifecycle using Claude, Codex, or GitHub Copilot APIs",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "publisher": "ai-native-devops",
   "license": "MIT",
   "repository": {
@@ -116,11 +116,6 @@
         "command": "aiNativeDevOps.runPlanDesignPipeline",
         "title": "Run Plan & Design Pipeline",
         "category": "AI DevOps"
-      },
-      {
-        "command": "aiNativeDevOps.openRequirement",
-        "title": "Open Requirement Intake",
-        "category": "AI DevOps"
       }
     ],
     "configuration": {
@@ -208,11 +203,6 @@
     },
     "menus": {
       "view/item/context": [
-        {
-          "command": "aiNativeDevOps.openRequirement",
-          "when": "view == aiNativeDevOps.lifecycle && viewItem == phase",
-          "group": "inline@0"
-        },
         {
           "command": "aiNativeDevOps.openPhase",
           "when": "view == aiNativeDevOps.lifecycle && viewItem == phase",
