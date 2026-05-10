@@ -43,6 +43,7 @@ const phases_1 = require("./phases");
 const lifecycleProvider_1 = require("./lifecycleProvider");
 const phasePanel_1 = require("./phasePanel");
 const checklistPanel_1 = require("./checklistPanel");
+const requirementPanel_1 = require("./requirementPanel");
 const aiRunner_1 = require("./aiRunner");
 const agentAutomation_1 = require("./agentAutomation");
 const phasePanel_2 = require("./phasePanel");
@@ -238,6 +239,13 @@ function activate(context) {
     // Run Plan + Design pipeline from a single requirements input
     vscode.commands.registerCommand("aiNativeDevOps.runPlanDesignPipeline", async () => {
         await runPlanDesignPipeline(context, aiRunner);
+    }), 
+    // Open requirement intake panel (Phase 00)
+    vscode.commands.registerCommand("aiNativeDevOps.openRequirement", (phaseArg) => {
+        const p = resolvePhaseArg(phaseArg) ?? phases_1.PHASES.find(ph => ph.id === 0);
+        if (!p)
+            return;
+        requirementPanel_1.RequirementPanel.show(p, context, aiRunner);
     }), 
     // Generate PR draft body for CODE agent output
     vscode.commands.registerCommand("aiNativeDevOps.generateCodePrTemplate", async () => {

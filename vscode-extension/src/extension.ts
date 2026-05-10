@@ -6,6 +6,7 @@ import { PHASES, Phase } from "./phases";
 import { LifecycleProvider } from "./lifecycleProvider";
 import { PhasePanel } from "./phasePanel";
 import { ChecklistPanel } from "./checklistPanel";
+import { RequirementPanel } from "./requirementPanel";
 import { AiOutputSink, AiRunner } from "./aiRunner";
 import {
   buildAutomationPrompt,
@@ -274,6 +275,16 @@ export function activate(context: vscode.ExtensionContext) {
       "aiNativeDevOps.runPlanDesignPipeline",
       async () => {
         await runPlanDesignPipeline(context, aiRunner);
+      }
+    ),
+
+    // Open requirement intake panel (Phase 00)
+    vscode.commands.registerCommand(
+      "aiNativeDevOps.openRequirement",
+      (phaseArg?: unknown) => {
+        const p = resolvePhaseArg(phaseArg) ?? PHASES.find(ph => ph.id === 0);
+        if (!p) return;
+        RequirementPanel.show(p, context, aiRunner);
       }
     ),
 

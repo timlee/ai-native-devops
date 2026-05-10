@@ -26,6 +26,37 @@ export interface AgentAutomationSpec {
 
 export const AGENT_AUTOMATION_SPECS: AgentAutomationSpec[] = [
   {
+    phaseId: 0,
+    phaseKey: "requirement",
+    agentName: "REQUIREMENT agent",
+    objective: "Convert raw stakeholder requirements into five structured planning artifacts ready for the PLAN phase.",
+    triggers: [
+      { id: "manual_input", label: "Manual requirement input", description: "User-entered requirements text" },
+    ],
+    automatedFlow: [
+      "Parse and clarify the raw requirements text",
+      "Generate a prioritized product requirements list",
+      "Decompose into backlog items with labels and priorities",
+      "Write user stories in As a / I want / So that format",
+      "Define measurable acceptance criteria per story",
+      "Record planning notes: assumptions, risks, open questions",
+    ],
+    outputs: [
+      "Product requirements",
+      "Backlog items",
+      "User stories",
+      "Acceptance criteria",
+      "Planning notes",
+    ],
+    artifactPaths: [
+      "plan/product-requirements.md",
+      "plan/backlog-items.md",
+      "plan/user-stories.md",
+      "plan/acceptance-criteria.md",
+      "plan/planning-notes.md",
+    ],
+  },
+  {
     phaseId: 1,
     phaseKey: "plan",
     agentName: "PLAN agent",

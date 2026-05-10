@@ -1,0 +1,25 @@
+{
+  "package": "minimal-software-project-md",
+  "created": "2026-05-10",
+  "description": "Minimum Markdown documentation structure for a software development project.",
+  "markdown_file_count": 17,
+  "files": [
+    ".github/ISSUE_TEMPLATE/bug_report.md",
+    ".github/ISSUE_TEMPLATE/feature_request.md",
+    ".github/pull_request_template.md",
+    "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "PROJECT_STRUCTURE.md",
+    "README.md",
+    "SECURITY.md",
+    "docs/adr/0001-record-architecture-decisions.md",
+    "docs/architecture.md",
+    "docs/development-guide.md",
+    "docs/operations-runbook.md",
+    "docs/project-overview.md",
+    "docs/release-and-deployment.md",
+    "docs/requirements.md",
+    "docs/testing-guide.md"
+  ]
+}
