@@ -318,7 +318,7 @@
 <nav>
   <div class="logo">
     <h2>AI-Native DevOps</h2>
-    <p>VS Code Extension v0.1.9</p>
+    <p>VS Code Extension v0.2.0</p>
   </div>
 
   <span class="nav-section">Getting Started</span>
@@ -338,6 +338,9 @@
   <a href="#scaffold">Scaffold Artifacts</a>
   <a href="#webhook">Webhook Queue</a>
   <a href="#pr-template">PR Draft Generator</a>
+
+  <span class="nav-section">Usage Scenarios</span>
+  <a href="#scenario-plan-design">Plan &amp; Design Pipeline</a>
 
   <span class="nav-section">Reference</span>
   <a href="#phases-ref">All 11 Phases</a>
@@ -796,6 +799,139 @@
     <p>Every PR created by AI must include an <em>AI assistance</em> section disclosing which tool was used and which prompt was referenced. This keeps the audit trail complete.</p>
   </div>
 
+  <!-- ── USAGE SCENARIO: PLAN & DESIGN PIPELINE ── -->
+  <h2 id="scenario-plan-design">Usage Scenario: Plan &amp; Design Pipeline</h2>
+  <p>
+    The <strong>Plan &amp; Design Pipeline</strong> is a single command that takes your raw
+    requirements, runs the PLAN and DESIGN agents in sequence, saves all artifacts to a
+    <code>plan/</code> folder, and automatically builds a new versioned <code>.vsix</code>
+    package — all without leaving VS Code.
+  </p>
+
+  <div class="callout info">
+    <div class="icon">ℹ️</div>
+    <p>
+      <strong>Recommended AI provider for this pipeline: Claude.</strong>
+      Both the PLAN and DESIGN phases are reasoning-heavy — scope decomposition, trade-off analysis,
+      threat modeling. Claude produces the most structured and actionable output for these phases.
+    </p>
+  </div>
+
+  <h3>What it does</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-tag">Step 1</div>
+      <h4>Input requirements</h4>
+      <p>You type a feature request, problem statement, or stakeholder brief into a single input box.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">Step 2</div>
+      <h4>01 · Plan runs</h4>
+      <p>The PLAN agent produces user stories, acceptance criteria, a risk log, and an implementation sequence. Output streams live into the Phase Guide panel and is saved to <code>plan/01-plan-output.md</code>.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">Step 3</div>
+      <h4>02 · Design runs</h4>
+      <p>The DESIGN agent receives your requirements <em>plus</em> the plan output as context. It produces architecture options, an ADR, an API contract, and a threat model, saved to <code>plan/02-design-output.md</code>.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">Step 4</div>
+      <h4>.vsix generated</h4>
+      <p>The extension bumps the patch version in <code>package.json</code> and runs <code>npm run package</code> to produce a new <code>ai-native-devops-x.y.z.vsix</code> in the extension folder.</p>
+    </div>
+  </div>
+
+  <h3>How to run it</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Set your AI provider to Claude</h4>
+        <p>Run <span class="cmd-pill">AI DevOps: Select AI Provider</span>, choose <strong>Anthropic Claude</strong>, and enter your API key when prompted.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Launch the pipeline</h4>
+        <p>Open the Command Palette (<kbd>Ctrl+Shift+P</kbd>) and run:</p>
+        <p><span class="cmd-pill">AI DevOps: Run Plan &amp; Design Pipeline</span></p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Enter your requirements</h4>
+        <p>Type your requirements into the input box. Be as specific as you can — include constraints, target users, and success criteria.</p>
+        <pre><code><span class="cmt"># Example requirement inputs</span>
+
+<span class="str">Add dark mode support to the VS Code extension webviews.
+Target: all 11 phase guide panels and the checklist panel.
+Constraint: must use VS Code theme variables only, no hard-coded colours.
+Success: WCAG 2.1 AA contrast passes in both light and dark themes.</span></code></pre>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Watch the pipeline run</h4>
+        <p>A progress notification appears. The Phase Guide panel opens for each phase, streaming the AI output in real time. Both phases run sequentially — the design agent sees the plan agent's output automatically.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h4>Review artifacts and install the new .vsix</h4>
+        <p>When the pipeline finishes, a notification shows the new version number. Click <strong>Open Plan Output</strong> or <strong>Open Design Output</strong> to review the generated Markdown. The new <code>.vsix</code> is ready to install or distribute.</p>
+        <pre><code><span class="cmt"># Artifacts written by the pipeline</span>
+plan/
+  01-plan-output.md      <span class="cmt"># user stories, risk log, sequence</span>
+  02-design-output.md    <span class="cmt"># ADR, architecture options, threat model</span>
+
+vscode-extension/
+  ai-native-devops-0.2.0.vsix   <span class="cmt"># installable package</span></code></pre>
+      </div>
+    </div>
+  </div>
+
+  <h3>Artifact content guide</h3>
+  <table>
+    <thead>
+      <tr><th>File</th><th>Phase</th><th>What it contains</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>plan/01-plan-output.md</code></td>
+        <td>01 · Plan</td>
+        <td>User stories, acceptance criteria, dependency map, risk log, and recommended implementation sequence</td>
+      </tr>
+      <tr>
+        <td><code>plan/02-design-output.md</code></td>
+        <td>02 · Design</td>
+        <td>Architecture options with trade-offs, selected option ADR, API contract summary, threat model with mitigations</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Handoff to the CODE phase</h3>
+  <p>
+    After reviewing both artifacts, open the <strong>03 · Code</strong> phase guide and run
+    <span class="cmd-pill">AI DevOps: Run Agent Automation Flow</span>.
+    Select the Code phase and the <code>ai_code</code> trigger.
+    Paste the relevant sections from <code>plan/02-design-output.md</code> as the request context —
+    the CODE agent will use the architecture decisions and API contract to plan its implementation.
+  </p>
+
+  <div class="callout warn">
+    <div class="icon">⚠️</div>
+    <p>
+      <strong>Human review is required before proceeding to CODE.</strong>
+      The plan and design artifacts are AI-generated drafts. Review them for correctness,
+      fill in open questions, and get the required stakeholder approval before treating them
+      as the authoritative design contract.
+    </p>
+  </div>
+
   <!-- ── PHASES REFERENCE ── -->
   <h2 id="phases-ref">All 11 Lifecycle Phases</h2>
 
@@ -1011,6 +1147,11 @@
         <td>AI DevOps: Generate CODE Agent PR Draft</td>
         <td>Produces a governance-compliant PR body for AI-generated code changes</td>
       </tr>
+      <tr>
+        <td><span class="cmd-pill">aiNativeDevOps.runPlanDesignPipeline</span></td>
+        <td>AI DevOps: Run Plan &amp; Design Pipeline</td>
+        <td>Runs PLAN then DESIGN agents from a single requirements input, saves artifacts to <code>plan/</code>, and builds a new <code>.vsix</code></td>
+      </tr>
     </tbody>
   </table>
 
@@ -1018,7 +1159,7 @@
 
 <!-- ── Footer ── -->
 <footer>
-  <p>AI-Native DevOps v0.1.9 &nbsp;·&nbsp; MIT License &nbsp;·&nbsp;
+  <p>AI-Native DevOps v0.2.0 &nbsp;·&nbsp; MIT License &nbsp;·&nbsp;
   Questions? Open an issue in the repository.</p>
 </footer>
 
