@@ -2,7 +2,11 @@
   "name": "ai-native-devops",
   "displayName": "AI-Native DevOps",
   "description": "Guide software development through the 11-phase AI-native DevOps lifecycle using Claude, Codex, or GitHub Copilot APIs",
+<<<<<<< HEAD
   "version": "0.3.9",
+=======
+  "version": "0.3.7",
+>>>>>>> bd34951 (In lifecycle 2 Code phase, step 3. the extension call claude/codex/copilot vscode plugin to input the issue content in the claude/codex/copilot vscode plugin.)
   "publisher": "ai-native-devops",
   "license": "MIT",
   "repository": {

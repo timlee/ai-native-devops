@@ -127,6 +127,9 @@ class CodePanel {
                 case "askAI":
                     this._handleAskAI(msg.additionalContext ?? "");
                     break;
+                case "openInPlugin":
+                    this._handleOpenInPlugin(msg.additionalContext ?? "");
+                    break;
                 case "continueToTests":
                     this._handleContinueToTests();
                     break;
@@ -287,6 +290,60 @@ class CodePanel {
             },
         };
         await this._aiRunner.run(this._phase, prompt, sink);
+    }
+    async _handleOpenInPlugin(additionalContext) {
+        const issue = this._workflowCtx.selectedIssue;
+        const branch = this._workflowCtx.branchName;
+        if (!issue || !branch) {
+            return;
+        }
+        const prompt = buildCodePrompt(issue, branch, additionalContext);
+        const provider = vscode.workspace.getConfiguration("aiNativeDevOps").get("provider", "copilot");
+        // Always copy to clipboard so the user has a reliable fallback.
+        await vscode.env.clipboard.writeText(prompt);
+        let pluginOpened = false;
+        try {
+            if (provider === "copilot") {
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: prompt,
+                    isPartialQuery: true,
+                });
+                pluginOpened = true;
+            }
+            else if (provider === "claude") {
+                // Try Claude Code extension commands in order of likelihood.
+                for (const cmd of ["claude-code.openChat", "claude-code.newChat", "workbench.view.extension.claude-code-sidebar"]) {
+                    try {
+                        await vscode.commands.executeCommand(cmd);
+                        pluginOpened = true;
+                        break;
+                    }
+                    catch { /* try next */ }
+                }
+                if (!pluginOpened) {
+                    // Fallback: VS Code chat with @claude participant prefix.
+                    await vscode.commands.executeCommand("workbench.action.chat.open", {
+                        query: "@claude " + prompt.slice(0, 1800),
+                        isPartialQuery: true,
+                    });
+                    pluginOpened = true;
+                }
+            }
+            else {
+                // openai / codex: use VS Code generic chat panel.
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: prompt,
+                    isPartialQuery: true,
+                });
+                pluginOpened = true;
+            }
+        }
+        catch { /* all attempts failed — clipboard is the fallback */ }
+        const notif = pluginOpened
+            ? `Prompt loaded in ${provider} chat. Also copied to clipboard.`
+            : `Prompt copied to clipboard. Paste it into your ${provider} chat panel.`;
+        vscode.window.showInformationMessage(notif);
+        this._panel.webview.postMessage({ command: "pluginOpened", provider, success: pluginOpened });
     }
     _handleContinueToTests() {
         this._step = "run-tests";
@@ -686,12 +743,9 @@ class CodePanel {
     <label for="additionalContextInput">Additional Context (optional)</label>
     <textarea id="additionalContextInput" placeholder="Any extra context, constraints, or refinements for the AI…"></textarea>
   </div>
-  <div id="aiSpinner" class="spinner-row" style="display:none;"><div class="spinner"></div> AI is thinking…</div>
-  <div id="aiOutputPre" class="output-pre" style="display:none;"></div>
   <div class="button-row">
-    <button class="primary" id="askAIBtn" onclick="askAI()">Ask AI</button>
+    <button class="secondary" id="openInPluginBtn" onclick="openInPlugin()">Open in AI Plugin</button>
     <button class="primary" id="continueToTestsBtn" style="display:none;" onclick="continueToTests()">Continue to Tests</button>
-    <button class="secondary" id="copyAIBtn" style="display:none;" onclick="copyAI()">Copy AI Output</button>
     <button class="secondary" onclick="goBack('ai-assist')">Back</button>
   </div>
 </section>
@@ -740,7 +794,6 @@ class CodePanel {
 <script>
 const vscode = acquireVsCodeApi();
 let allIssues = [];
-let aiOutputText = '';
 
 // ── Step navigation ──────────────────────────────────────────────────────────
 function showSection(n) {
@@ -853,19 +906,10 @@ function continueToAI() {
 }
 
 // ── Step 3 ───────────────────────────────────────────────────────────────────
-function askAI() {
+function openInPlugin() {
   const ctx = document.getElementById('additionalContextInput').value;
-  document.getElementById('askAIBtn').disabled = true;
-  document.getElementById('aiOutputPre').style.display = 'none';
-  document.getElementById('aiOutputPre').textContent = '';
-  document.getElementById('aiSpinner').style.display = 'flex';
-  document.getElementById('continueToTestsBtn').style.display = 'none';
-  document.getElementById('copyAIBtn').style.display = 'none';
-  aiOutputText = '';
-  vscode.postMessage({ command: 'askAI', additionalContext: ctx });
-}
-function copyAI() {
-  navigator.clipboard.writeText(aiOutputText).catch(() => {});
+  document.getElementById('openInPluginBtn').disabled = true;
+  vscode.postMessage({ command: 'openInPlugin', additionalContext: ctx });
 }
 function continueToTests() {
   markDone(3); markActive(4); showSection(4);
@@ -974,30 +1018,9 @@ window.addEventListener('message', ev => {
       document.getElementById('branchStatusMsg').className = 'branch-status error-msg';
       document.getElementById('branchStatusMsg').textContent = msg.text || 'Failed to create branch.';
       break;
-    case 'started':
-      document.getElementById('aiSpinner').style.display = 'flex';
-      document.getElementById('aiOutputPre').style.display = 'block';
-      document.getElementById('aiOutputPre').textContent = '';
-      aiOutputText = '';
-      break;
-    case 'appendChunk':
-      aiOutputText += msg.text || '';
-      const pre = document.getElementById('aiOutputPre');
-      pre.textContent = aiOutputText;
-      pre.scrollTop = pre.scrollHeight;
-      break;
-    case 'aiDone':
-      document.getElementById('aiSpinner').style.display = 'none';
-      document.getElementById('askAIBtn').disabled = false;
+    case 'pluginOpened':
+      document.getElementById('openInPluginBtn').disabled = false;
       document.getElementById('continueToTestsBtn').style.display = 'inline-block';
-      document.getElementById('copyAIBtn').style.display = 'inline-block';
-      aiOutputText = msg.output || aiOutputText;
-      break;
-    case 'aiError':
-      document.getElementById('aiSpinner').style.display = 'none';
-      document.getElementById('askAIBtn').disabled = false;
-      document.getElementById('aiOutputPre').style.display = 'block';
-      document.getElementById('aiOutputPre').textContent = 'Error: ' + (msg.text || 'Unknown error');
       break;
     case 'commandsLoaded':
       buildCommandCards(msg.commands || []);
