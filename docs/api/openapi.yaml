@@ -1,219 +1,318 @@
 # OpenAPI Spec
 
-> Module: Auth | ID: REQ-003
+> Module: test | ID: tst-001
 
 ```yaml
 openapi: 3.1.0
 info:
-  title: Auth Module API
+  title: TST-001 API Contract Testing Surface
   version: 1.0.0
-  description: Secure authentication, token lifecycle, and introspection — REQ-003
+  description: >
+    OpenAPI specification defining the API surface under test.
+    All endpoints, schemas, status codes, and security schemes
+    are treated as the single source of truth for automated testing.
 
 servers:
-  - url: https://api.example.com/auth
+  - url: http://localhost:8000
+    description: Local development / CI test target
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
 
 paths:
-  /login:
-    post:
-      operationId: login
-      summary: Authenticate user and issue tokens
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
-      responses:
-        '200':
-          description: Successful authentication
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TokenResponse'
-        '401':
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '423':
-          description: Account locked
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Seconds until lockout expires
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '400':
-          description: Bad request or plain HTTP rejected
-
-  /logout:
-    post:
-      operationId: logout
-      summary: Invalidate access and refresh tokens
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LogoutRequest'
-      responses:
-        '204':
-          description: Successfully logged out
-        '401':
-          description: Unauthorized
-
-  /refresh:
-    post:
-      operationId: refreshToken
-      summary: Rotate refresh token and issue new access token
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshRequest'
-      responses:
-        '200':
-          description: New token pair issued
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TokenResponse'
-        '401':
-          description: Refresh token invalid, expired, or already used
-
-  /introspect:
-    post:
-      operationId: introspectToken
-      summary: Validate a JWT (RFC 7662)
-      security:
-        - basicAuth: []
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              required: [token]
-              properties:
-                token:
-                  type: string
-      responses:
-        '200':
-          description: Introspection result
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/IntrospectionResponse'
-
-  /.well-known/jwks.json:
+  /health:
     get:
-      operationId: getJwks
-      summary: Retrieve public keys for JWT verification
+      operationId: getHealth
+      summary: Health check endpoint
+      security: []
+      tags: [Health]
       responses:
-        '200':
-          description: JWKS document
+        "200":
+          description: Service is healthy
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JwksResponse'
+                $ref: "#/components/schemas/HealthResponse"
+
+  /items:
+    get:
+      operationId: listItems
+      summary: List all items
+      tags: [Items]
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Paginated list of items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    post:
+      operationId: createItem
+      summary: Create a new item
+      tags: [Items]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemCreate"
+      responses:
+        "201":
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /items/{itemId}:
+    parameters:
+      - $ref: "#/components/parameters/ItemIdParam"
+
+    get:
+      operationId: getItem
+      summary: Retrieve a single item by ID
+      tags: [Items]
+      responses:
+        "200":
+          description: Item found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    put:
+      operationId: updateItem
+      summary: Replace an item
+      tags: [Items]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemCreate"
+      responses:
+        "200":
+          description: Item updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    delete:
+      operationId: deleteItem
+      summary: Delete an item
+      tags: [Items]
+      responses:
+        "204":
+          description: Item deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
 components:
   securitySchemes:
-    bearerAuth:
+    BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-    basicAuth:
-      type: http
-      scheme: basic
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  parameters:
+    ItemIdParam:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
 
   schemas:
-    LoginRequest:
+    HealthResponse:
       type: object
-      required: [email, password]
+      required: [status, timestamp]
       properties:
-        email:
+        status:
           type: string
-          format: email
-        password:
+          enum: [ok, degraded]
+        timestamp:
           type: string
-          minLength: 8
-          writeOnly: true
+          format: date-time
 
-    TokenResponse:
+    Item:
       type: object
+      required: [id, name, status, createdAt, updatedAt]
       properties:
-        access_token:
+        id:
           type: string
-        token_type:
+          format: uuid
+        name:
           type: string
-          enum: [Bearer]
-        expires_in:
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+        status:
+          type: string
+          enum: [active, inactive, archived]
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 20
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ItemCreate:
+      type: object
+      required: [name, status]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+        status:
+          type: string
+          enum: [active, inactive, archived]
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 20
+
+    ItemListResponse:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Item"
+        total:
           type: integer
-          description: Access token TTL in seconds
-        refresh_token:
-          type: string
-
-    RefreshRequest:
-      type: object
-      required: [refresh_token]
-      properties:
-        refresh_token:
-          type: string
-
-    LogoutRequest:
-      type: object
-      required: [refresh_token]
-      properties:
-        refresh_token:
-          type: string
-
-    IntrospectionResponse:
-      type: object
-      required: [active]
-      properties:
-        active:
-          type: boolean
-        sub:
-          type: string
-        exp:
+          minimum: 0
+        page:
           type: integer
-        iat:
+          minimum: 1
+        limit:
           type: integer
-        jti:
-          type: string
-        email:
-          type: string
+          minimum: 1
+          maximum: 100
 
-    JwksResponse:
+    ErrorResponse:
       type: object
+      required: [code, message]
       properties:
-        keys:
+        code:
+          type: string
+        message:
+          type: string
+        details:
           type: array
           items:
             type: object
             properties:
-              kty: { type: string }
-              use: { type: string }
-              kid: { type: string }
-              alg: { type: string }
-              n:   { type: string }
-              e:   { type: string }
+              field:
+                type: string
+              issue:
+                type: string
 
-    ErrorResponse:
-      type: object
-      properties:
-        error:
-          type: string
-        error_description:
-          type: string
+  responses:
+    BadRequest:
+      description: Invalid request payload
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Missing or invalid authentication credentials
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    UnprocessableEntity:
+      description: Semantic validation failure
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
 ```
 
 ---

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"c:\\\\Users\\\\wtlee\\\\Documents\\\\GitHub\\\\ai-native-devops\\\\docs\\\\lifecycle\\\\\")",
+      "Read(//c/Users/Users/wtlee/Documents/GitHub/ai-native-devops/vscode-extension/src/**)",
+      "Bash(npx tsc *)",
+      "Bash(node -p \"require\\('./package.json'\\).version\")",
+      "Bash(python -c \"import zipfile; z = zipfile.ZipFile\\('ai-native-devops-0.3.4.vsix'\\); files = [f for f in z.namelist\\(\\) if 'homePanel' in f or 'extension.js' in f]; print\\('\\\\n'.join\\(files\\)\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).version\\)\")",
+      "Bash(npx @vscode/vsce package --out vsix/ai-native-devops-0.3.6.vsix)"
+    ]
+  }
+}

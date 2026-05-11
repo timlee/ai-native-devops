@@ -1,32 +1,57 @@
 # Architecture Diagram
 
-> Module: Auth | ID: REQ-003
+> Module: test | ID: tst-001
 
 ```mermaid
-graph TD
-    Client([Client / Browser])
-    GW[API Gateway\nHTTPS Enforcement]
-    AuthSvc[Auth Service\nNode.js / Go]
-    Redis[(Redis\nRefresh Tokens\nBlocklist\nLockout State)]
-    DB[(PostgreSQL\nUsers\nAudit Logs)]
-    JWKS[JWKS Endpoint\n/.well-known/jwks.json]
-    LogSink[Centralized Log Sink\nDatadog / ELK]
-    DownstreamSvc[Downstream Services]
+flowchart TD
+    subgraph CI["CI Pipeline"]
+        trigger["Git Push / PR Trigger"]
+        gate["Pass/Fail Quality Gate"]
+        report["JUnit XML Report Artifact"]
+    end
 
-    Client -->|HTTPS| GW
-    GW -->|Reject HTTP 400| Client
-    GW --> AuthSvc
+    subgraph TestFramework["Test Framework (pytest + schemathesis)"]
+        loader["OpenAPI Loader\n(single source of truth)"]
+        contract["Contract Test Runner\nSchema Validation"]
+        status["HTTP Status Code\nAssertion Suite"]
+        auth["Auth/Security Scheme\nTest Suite"]
+        boundary["Boundary & Negative\nTest Suite"]
+        coverage["Coverage Collector\n(pytest-cov ≥80%)"]
+        audit["Endpoint Auditor\n(undocumented route detector)"]
+    end
 
-    AuthSvc -->|Verify password hash bcrypt≥12| DB
-    AuthSvc -->|Store/Rotate refresh tokens| Redis
-    AuthSvc -->|Blocklist tokens| Redis
-    AuthSvc -->|Lockout state R/W| Redis
-    AuthSvc -->|Write audit events| DB
-    AuthSvc -->|Structured logs| LogSink
-    AuthSvc -->|Publish RS256 public keys| JWKS
+    subgraph TargetAPI["Target API Service"]
+        router["API Router"]
+        handlers["Endpoint Handlers"]
+        middleware["Auth Middleware\n(Bearer / API Key)"]
+        db[("Data Store")]
+    end
 
-    DownstreamSvc -->|POST /auth/introspect| AuthSvc
-    DownstreamSvc -->|GET /.well-known/jwks.json| JWKS
+    openapi["openapi.yaml\n(Source of Truth)"]
+
+    trigger --> loader
+    openapi --> loader
+    loader --> contract
+    loader --> status
+    loader --> auth
+    loader --> boundary
+    loader --> audit
+
+    contract --> router
+    status --> router
+    auth --> middleware
+    boundary --> router
+    router --> handlers
+    handlers --> db
+
+    contract --> coverage
+    status --> coverage
+    auth --> coverage
+    boundary --> coverage
+
+    coverage --> gate
+    audit --> gate
+    gate --> report
 ```
 
 ---

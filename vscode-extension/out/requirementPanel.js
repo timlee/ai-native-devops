@@ -42,13 +42,18 @@ const vscode = __importStar(require("vscode"));
 const phasePanel_1 = require("./phasePanel");
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ISSUE_SECTIONS = [
-    "Product Requirements",
     "User Stories",
     "Acceptance Criteria",
     "Backlog Items",
 ];
+const ALL_DESIGN_ARTIFACTS = [
+    "Architecture Diagram",
+    "ADR",
+    "OpenAPI Spec",
+    "Data Model",
+    "Threat Model",
+];
 const SECTION_FILES = {
-    "Product Requirements": "plan/product-requirements.md",
     "User Stories": "plan/user-stories.md",
     "Acceptance Criteria": "plan/acceptance-criteria.md",
     "Backlog Items": "plan/backlog-items.md",
@@ -64,24 +69,30 @@ function buildPrompt(moduleName, reqId, description) {
         `- Description: ${description}`,
         "",
         "Task:",
-        "Generate four planning artifacts for this requirement as structured Markdown.",
+        "Generate three planning artifacts for this requirement as structured Markdown.",
         "Use these exact ## headings in this order (no text before the first heading):",
         "",
-        "## Product Requirements",
         "## User Stories",
         "## Acceptance Criteria",
         "## Backlog Items",
         "",
         "Guidelines:",
-        "- Product Requirements: numbered list of clear, testable requirements scoped to this module.",
-        "- User Stories: \"As a <role>, I want <goal>, so that <benefit>\" — one per bullet.",
-        "- Acceptance Criteria: measurable checkbox conditions (- [ ]) tied to each story.",
-        "- Backlog Items: prioritized list with P0/P1/P2 labels and S/M/L effort estimates.",
+        "- User Stories: Write exactly ONE user story in the form \"As a <role>, I want <goal>, so that <benefit>\".",
+        "- Acceptance Criteria: Write measurable checkbox conditions (- [ ]) that directly verify the single user story above.",
+        "- Backlog Items: Write a prioritized task list derived from the single user story with P0/P1/P2 labels and S/M/L effort estimates.",
         "",
         "Output structured Markdown only. Do not add any text before the first ## heading.",
     ].join("\n");
 }
-function buildDesignPrompt(moduleName, reqId, description, requirements) {
+const DESIGN_ARTIFACT_DEFS = [
+    { name: "Architecture Diagram", guide: "- Architecture Diagram: Mermaid diagram (```mermaid fenced block) showing system components, services, and data flows." },
+    { name: "ADR", guide: "- ADR: Architecture Decision Record — Title, Status, Context, Decision, Consequences (positive/negative)." },
+    { name: "OpenAPI Spec", guide: "- OpenAPI Spec: Valid OpenAPI 3.1 YAML for the API surface implied by the requirements." },
+    { name: "Data Model", guide: "- Data Model: Entity-relationship description with field types and cardinality in Markdown table format." },
+    { name: "Threat Model", guide: "- Threat Model: STRIDE-based threat enumeration with mitigations as a Markdown table." },
+];
+function buildDesignPrompt(moduleName, reqId, description, requirements, selectedArtifacts) {
+    const selected = DESIGN_ARTIFACT_DEFS.filter(a => selectedArtifacts.includes(a.name));
     return [
         "You are the DESIGN phase AI agent.",
         "",
@@ -89,9 +100,6 @@ function buildDesignPrompt(moduleName, reqId, description, requirements) {
         `- Module: ${moduleName}`,
         `- ID: ${reqId}`,
         `- Description: ${description}`,
-        "",
-        "## Product Requirements (confirmed by user)",
-        requirements.productRequirements,
         "",
         "## User Stories (confirmed by user)",
         requirements.userStories,
@@ -106,21 +114,13 @@ function buildDesignPrompt(moduleName, reqId, description, requirements) {
             ? [`## Planning Notes (confirmed by user)`, requirements.planningNotes, ""]
             : []),
         "Task:",
-        "Generate five architecture design artifacts as structured Markdown.",
+        `Generate ${selected.length} architecture design artifact${selected.length !== 1 ? "s" : ""} as structured Markdown.`,
         "Use these exact ## headings in this order (no text before the first heading):",
         "",
-        "## Architecture Diagram",
-        "## ADR",
-        "## OpenAPI Spec",
-        "## Data Model",
-        "## Threat Model",
+        ...selected.map(a => `## ${a.name}`),
         "",
         "Guidelines:",
-        "- Architecture Diagram: Mermaid diagram (```mermaid fenced block) showing system components, services, and data flows.",
-        "- ADR: Architecture Decision Record — Title, Status, Context, Decision, Consequences (positive/negative).",
-        "- OpenAPI Spec: Valid OpenAPI 3.1 YAML for the API surface implied by the requirements.",
-        "- Data Model: Entity-relationship description with field types and cardinality in Markdown table format.",
-        "- Threat Model: STRIDE-based threat enumeration with mitigations as a Markdown table.",
+        ...selected.map(a => a.guide),
         "",
         "Output structured Markdown only. Do not add any text before the first ## heading.",
     ].join("\n");
@@ -167,16 +167,19 @@ function writeArtifacts(repoRoot, moduleName, reqId, sections, planningNotes) {
     written.push("plan/planning-notes.md");
     return written;
 }
-function writeDesignFiles(repoRoot, moduleName, reqId, artifacts) {
+function writeDesignFiles(repoRoot, moduleName, reqId, artifacts, selectedArtifacts) {
     const written = [];
     const fileMap = [
-        { key: "architectureDiagram", file: "docs/architecture/design-draft.md", heading: "Architecture Diagram" },
-        { key: "adr", file: `docs/adr/ADR-${reqId}.md`, heading: "ADR" },
-        { key: "openApiSpec", file: "docs/api/openapi.yaml", heading: "OpenAPI Spec" },
-        { key: "dataModel", file: "docs/data/data-model.md", heading: "Data Model" },
-        { key: "threatModel", file: "docs/security/threat-model.md", heading: "Threat Model" },
+        { key: "architectureDiagram", file: "docs/architecture/design-draft.md", heading: "Architecture Diagram", artifactName: "Architecture Diagram" },
+        { key: "adr", file: `docs/adr/ADR-${reqId}.md`, heading: "ADR", artifactName: "ADR" },
+        { key: "openApiSpec", file: "docs/api/openapi.yaml", heading: "OpenAPI Spec", artifactName: "OpenAPI Spec" },
+        { key: "dataModel", file: "docs/data/data-model.md", heading: "Data Model", artifactName: "Data Model" },
+        { key: "threatModel", file: "docs/security/threat-model.md", heading: "Threat Model", artifactName: "Threat Model" },
     ];
-    for (const { key, file, heading } of fileMap) {
+    for (const { key, file, heading, artifactName } of fileMap) {
+        if (!selectedArtifacts.includes(artifactName)) {
+            continue;
+        }
         const content = artifacts[key];
         const fullPath = path.join(repoRoot, file);
         fs.mkdirSync(path.dirname(fullPath), { recursive: true });
@@ -185,17 +188,18 @@ function writeDesignFiles(repoRoot, moduleName, reqId, artifacts) {
     }
     return written;
 }
-function buildIssueBody(moduleName, reqId, requirements, design) {
+function buildIssueBody(moduleName, reqId, description, requirements, design) {
     const lines = [
         `> **Module:** ${moduleName} | **ID:** ${reqId}`,
         `> _Generated by AI-Native DevOps extension_`,
         "",
         "---",
-        "## Requirements Artifacts",
+        "## User Requirement",
+        "",
+        description || "_Not provided._",
         "",
     ];
     const reqMap = [
-        ["Product Requirements", requirements.productRequirements],
         ["User Stories", requirements.userStories],
         ["Acceptance Criteria", requirements.acceptanceCriteria],
         ["Backlog Items", requirements.backlogItems],
@@ -214,7 +218,10 @@ function buildIssueBody(moduleName, reqId, requirements, design) {
             ["Threat Model", design.threatModel],
         ];
         for (const [heading, content] of designMap) {
-            lines.push(`### ${heading}`, "", content || "_Not generated._", "");
+            if (!content.trim()) {
+                continue;
+            }
+            lines.push(`### ${heading}`, "", content, "");
         }
     }
     return lines.join("\n");
@@ -294,6 +301,7 @@ class RequirementPanel {
         this._aiRunner = _aiRunner;
         this._rawOutput = "";
         this._step = "input";
+        this._cancelled = false;
         this._workflowCtx = { moduleName: "", reqId: "", description: "" };
         this._repoRoot = "";
         this._disposables = [];
@@ -305,10 +313,16 @@ class RequirementPanel {
                     this._handleSubmit(msg.moduleName ?? "", msg.reqId ?? "", msg.description ?? "");
                     break;
                 case "confirmRequirements":
-                    this._handleConfirmRequirements(msg);
+                    this._handleConfirmRequirements(msg, msg.selectedArtifacts ?? [...ALL_DESIGN_ARTIFACTS]);
                     break;
                 case "confirmDesign":
                     this._handleConfirmDesign(msg);
+                    break;
+                case "goBack":
+                    this._handleGoBack(msg.fromStep ?? "");
+                    break;
+                case "restart":
+                    this._handleRestart();
                     break;
                 case "openFile":
                     this._openFile(msg.text ?? "");
@@ -344,13 +358,18 @@ class RequirementPanel {
         const prompt = buildPrompt(this._workflowCtx.moduleName, this._workflowCtx.reqId, this._workflowCtx.description);
         const sink = {
             appendAiChunk: (chunk) => {
+                if (this._cancelled) {
+                    return;
+                }
                 this._rawOutput += chunk;
                 this._panel.webview.postMessage({ command: "appendChunk", text: chunk });
             },
             aiDone: () => {
+                if (this._cancelled) {
+                    return;
+                }
                 const sections = parseSections(this._rawOutput);
                 const artifacts = {
-                    productRequirements: sections.get("Product Requirements") ?? "",
                     userStories: sections.get("User Stories") ?? "",
                     acceptanceCriteria: sections.get("Acceptance Criteria") ?? "",
                     backlogItems: sections.get("Backlog Items") ?? "",
@@ -360,16 +379,37 @@ class RequirementPanel {
                 this._panel.webview.postMessage({ command: "aiDone", artifacts });
             },
             aiError: (msg) => {
+                if (this._cancelled) {
+                    return;
+                }
                 this._panel.webview.postMessage({ command: "aiError", text: msg });
             },
         };
         await this._aiRunner.run(this._phase, prompt, sink);
     }
-    async _handleConfirmRequirements(artifacts) {
+    _handleGoBack(fromStep) {
+        this._cancelled = true;
+        this._rawOutput = "";
+        if (fromStep === "review-requirements") {
+            this._step = "input";
+        }
+        else {
+            this._step = "review-requirements";
+        }
+        setImmediate(() => { this._cancelled = false; });
+    }
+    _handleRestart() {
+        this._cancelled = true;
+        this._rawOutput = "";
+        this._workflowCtx = { moduleName: "", reqId: "", description: "" };
+        this._step = "input";
+        setImmediate(() => { this._cancelled = false; });
+    }
+    async _handleConfirmRequirements(artifacts, selectedArtifacts) {
         this._workflowCtx.requirements = artifacts;
+        this._workflowCtx.selectedArtifacts = selectedArtifacts;
         const { moduleName, reqId } = this._workflowCtx;
         const sections = new Map([
-            ["Product Requirements", artifacts.productRequirements],
             ["User Stories", artifacts.userStories],
             ["Acceptance Criteria", artifacts.acceptanceCriteria],
             ["Backlog Items", artifacts.backlogItems],
@@ -379,26 +419,35 @@ class RequirementPanel {
         this._step = "gen-design";
         this._rawOutput = "";
         this._panel.webview.postMessage({ command: "started", step: "gen-design" });
-        const prompt = buildDesignPrompt(moduleName, reqId, this._workflowCtx.description, artifacts);
+        const prompt = buildDesignPrompt(moduleName, reqId, this._workflowCtx.description, artifacts, selectedArtifacts);
         const sink = {
             appendAiChunk: (chunk) => {
+                if (this._cancelled) {
+                    return;
+                }
                 this._rawOutput += chunk;
                 this._panel.webview.postMessage({ command: "appendChunk", text: chunk });
             },
             aiDone: () => {
+                if (this._cancelled) {
+                    return;
+                }
                 const secs = parseSections(this._rawOutput);
                 const designArtifacts = {
-                    architectureDiagram: secs.get("Architecture Diagram") ?? "",
-                    adr: secs.get("ADR") ?? "",
-                    openApiSpec: secs.get("OpenAPI Spec") ?? "",
-                    dataModel: secs.get("Data Model") ?? "",
-                    threatModel: secs.get("Threat Model") ?? "",
+                    architectureDiagram: selectedArtifacts.includes("Architecture Diagram") ? (secs.get("Architecture Diagram") ?? "") : "",
+                    adr: selectedArtifacts.includes("ADR") ? (secs.get("ADR") ?? "") : "",
+                    openApiSpec: selectedArtifacts.includes("OpenAPI Spec") ? (secs.get("OpenAPI Spec") ?? "") : "",
+                    dataModel: selectedArtifacts.includes("Data Model") ? (secs.get("Data Model") ?? "") : "",
+                    threatModel: selectedArtifacts.includes("Threat Model") ? (secs.get("Threat Model") ?? "") : "",
                 };
                 this._workflowCtx.design = designArtifacts;
                 this._step = "review-design";
-                this._panel.webview.postMessage({ command: "aiDone", artifacts: designArtifacts, step: "review-design" });
+                this._panel.webview.postMessage({ command: "aiDone", artifacts: designArtifacts, step: "review-design", selectedArtifacts });
             },
             aiError: (msg) => {
+                if (this._cancelled) {
+                    return;
+                }
                 this._panel.webview.postMessage({ command: "aiError", text: msg });
             },
         };
@@ -407,15 +456,14 @@ class RequirementPanel {
     async _handleConfirmDesign(artifacts) {
         this._workflowCtx.design = artifacts;
         const { moduleName, reqId } = this._workflowCtx;
-        const writtenDesign = writeDesignFiles(this._repoRoot, moduleName, reqId, artifacts);
+        const writtenDesign = writeDesignFiles(this._repoRoot, moduleName, reqId, artifacts, this._workflowCtx.selectedArtifacts ?? [...ALL_DESIGN_ARTIFACTS]);
         this._panel.webview.postMessage({ command: "filesReady", files: writtenDesign, phase: "design" });
-        this._step = "complete";
-        const title = `[${reqId}] ${moduleName}`;
-        const choice = await vscode.window.showInformationMessage(`Create GitHub Issue: "${title}"?`, { modal: true }, "Create", "Cancel");
-        if (choice !== "Create") {
-            this._panel.webview.postMessage({ command: "issueCancelled" });
+        const choice = await vscode.window.showInformationMessage(`Create GitHub issue "[${reqId}] ${moduleName}"?`, { modal: true }, "Create Issue");
+        if (choice !== "Create Issue") {
+            this._panel.webview.postMessage({ command: "confirmCancelled" });
             return;
         }
+        this._step = "complete";
         try {
             const cfg = vscode.workspace.getConfiguration("aiNativeDevOps");
             let owner = cfg.get("githubOwner", "").trim();
@@ -430,18 +478,14 @@ class RequirementPanel {
                 repo = info.repo;
             }
             const token = await getGithubToken();
-            const body = buildIssueBody(moduleName, reqId, this._workflowCtx.requirements, artifacts);
+            const title = `[${reqId}] ${moduleName}`;
+            const body = buildIssueBody(moduleName, reqId, this._workflowCtx.description, this._workflowCtx.requirements, artifacts);
             const { url, number } = await createGithubIssue(token, owner, repo, title, body, ["requirement", "design", "ai-generated"]);
             this._panel.webview.postMessage({ command: "issueReady", url, number });
-            const action = await vscode.window.showInformationMessage(`GitHub Issue #${number} created successfully.`, "Open Issue");
-            if (action === "Open Issue") {
-                vscode.env.openExternal(vscode.Uri.parse(url));
-            }
         }
         catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             this._panel.webview.postMessage({ command: "issueError", text: message });
-            vscode.window.showErrorMessage(`Failed to create GitHub Issue: ${message}`);
         }
     }
     async _openFile(relativePath) {
@@ -512,6 +556,16 @@ class RequirementPanel {
   }
   button.primary:hover { background: var(--vscode-button-hoverBackground); }
   button.primary:disabled { opacity: 0.5; cursor: default; }
+  button.secondary {
+    padding: 8px 16px;
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none; border-radius: 3px; cursor: pointer;
+    font-size: 0.95em; margin-top: 4px;
+  }
+  button.secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
+  button.secondary:disabled { opacity: 0.5; cursor: default; }
+  .button-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
   .divider { border: none; border-top: 1px solid var(--vscode-panel-border, #444); margin: 20px 0; }
   button.link-btn {
     background: none; border: none; padding: 0;
@@ -582,6 +636,8 @@ class RequirementPanel {
   /* Artifact review */
   .review-hint { color: var(--vscode-descriptionForeground); font-size: 0.88em; margin-bottom: 16px; }
   .artifact-group { margin-bottom: 16px; }
+  .artifact-select-group { margin-bottom: 16px; }
+  .cb-label { display: block; margin-bottom: 5px; font-size: 0.9em; cursor: pointer; }
   .artifact-label {
     display: block; font-weight: 600; font-size: 0.82em;
     text-transform: uppercase; letter-spacing: 0.05em;
@@ -655,10 +711,6 @@ class RequirementPanel {
   <div id="reqReviewArea" style="display:none">
     <p class="review-hint">Review and edit each artifact, then click Confirm &amp; Continue.</p>
     <div class="artifact-group">
-      <label class="artifact-label" for="ta-productRequirements">Product Requirements</label>
-      <textarea class="artifact-ta" id="ta-productRequirements"></textarea>
-    </div>
-    <div class="artifact-group">
       <label class="artifact-label" for="ta-userStories">User Stories</label>
       <textarea class="artifact-ta" id="ta-userStories"></textarea>
     </div>
@@ -674,7 +726,18 @@ class RequirementPanel {
       <label class="artifact-label" for="ta-planningNotes">Planning Notes</label>
       <textarea class="artifact-ta" id="ta-planningNotes" placeholder="Add assumptions, risks, open questions, dependencies…"></textarea>
     </div>
-    <button class="primary" id="confirmReqBtn" onclick="confirmRequirements()">Confirm &amp; Continue</button>
+    <div class="artifact-select-group">
+      <p class="review-hint" style="margin-bottom:6px">Select design artifacts to generate in Step 3:</p>
+      <label class="cb-label"><input type="checkbox" class="design-cb" value="Architecture Diagram" checked> Architecture Diagram</label>
+      <label class="cb-label"><input type="checkbox" class="design-cb" value="ADR" checked> ADR — Architecture Decision Record</label>
+      <label class="cb-label"><input type="checkbox" class="design-cb" value="OpenAPI Spec" checked> OpenAPI Spec</label>
+      <label class="cb-label"><input type="checkbox" class="design-cb" value="Data Model" checked> Data Model</label>
+      <label class="cb-label"><input type="checkbox" class="design-cb" value="Threat Model" checked> Threat Model</label>
+    </div>
+    <div class="button-row">
+      <button class="secondary" id="backFromStep2Btn" onclick="goBackFromStep2()">&#8592; Back</button>
+      <button class="primary" id="confirmReqBtn" onclick="confirmRequirements()">Confirm &amp; Continue</button>
+    </div>
   </div>
 </section>
 
@@ -684,32 +747,39 @@ class RequirementPanel {
     <span class="spinner"></span><span>Generating design artifacts from confirmed requirements…</span>
   </div>
   <pre id="designOutputPre" class="output-pre" style="display:none"></pre>
+  <div class="button-row" style="margin-top:12px">
+    <button class="secondary" id="backFromStep3Btn" onclick="goBackFromStep3()">&#8592; Back to Requirements</button>
+  </div>
 </section>
 
 <!-- Step 4: Review Design + Publish -->
 <section id="sectionStep4" style="display:none">
   <p class="review-hint">Review and edit each design artifact, then create the GitHub issue.</p>
-  <div class="artifact-group">
+  <div class="artifact-group" id="group-architectureDiagram">
     <label class="artifact-label" for="ta-architectureDiagram">Architecture Diagram (Mermaid)</label>
     <textarea class="artifact-ta code-ta" id="ta-architectureDiagram"></textarea>
   </div>
-  <div class="artifact-group">
+  <div class="artifact-group" id="group-adr">
     <label class="artifact-label" for="ta-adr">ADR — Architecture Decision Record</label>
     <textarea class="artifact-ta" id="ta-adr"></textarea>
   </div>
-  <div class="artifact-group">
+  <div class="artifact-group" id="group-openApiSpec">
     <label class="artifact-label" for="ta-openApiSpec">OpenAPI Spec (YAML)</label>
     <textarea class="artifact-ta code-ta" id="ta-openApiSpec"></textarea>
   </div>
-  <div class="artifact-group">
+  <div class="artifact-group" id="group-dataModel">
     <label class="artifact-label" for="ta-dataModel">Data Model</label>
     <textarea class="artifact-ta" id="ta-dataModel"></textarea>
   </div>
-  <div class="artifact-group">
+  <div class="artifact-group" id="group-threatModel">
     <label class="artifact-label" for="ta-threatModel">Threat Model</label>
     <textarea class="artifact-ta" id="ta-threatModel"></textarea>
   </div>
-  <button class="primary" id="createIssueBtn" onclick="confirmDesign()">Create GitHub Issue</button>
+  <div class="button-row">
+    <button class="secondary" id="backFromStep4Btn" onclick="goBackFromStep4()">&#8592; Back to Requirements</button>
+    <button class="secondary" id="newRequirementBtn" onclick="startNewRequirement()">&#8635; New Requirement</button>
+    <button class="primary" id="createIssueBtn" onclick="confirmDesign()">Create GitHub Issue</button>
+  </div>
 
   <div id="filesSection">
     <hr class="divider">
@@ -734,6 +804,7 @@ class RequirementPanel {
     [1,2,3,4].forEach(i => {
       const dot = document.getElementById('step-dot-' + i);
       dot.classList.toggle('active', i === n);
+      if (i === n) { dot.classList.remove('done'); }
     });
   }
 
@@ -760,18 +831,22 @@ class RequirementPanel {
 
   function confirmRequirements() {
     document.getElementById('confirmReqBtn').disabled = true;
+    const selectedArtifacts = Array.from(
+      document.querySelectorAll('.design-cb:checked')
+    ).map(cb => cb.value);
     vscode.postMessage({
       command: 'confirmRequirements',
-      productRequirements: document.getElementById('ta-productRequirements').value,
       userStories:         document.getElementById('ta-userStories').value,
       acceptanceCriteria:  document.getElementById('ta-acceptanceCriteria').value,
       backlogItems:        document.getElementById('ta-backlogItems').value,
       planningNotes:       document.getElementById('ta-planningNotes').value,
+      selectedArtifacts,
     });
   }
 
   function confirmDesign() {
     document.getElementById('createIssueBtn').disabled = true;
+    document.getElementById('backFromStep4Btn').disabled = true;
     vscode.postMessage({
       command: 'confirmDesign',
       architectureDiagram: document.getElementById('ta-architectureDiagram').value,
@@ -780,6 +855,99 @@ class RequirementPanel {
       dataModel:           document.getElementById('ta-dataModel').value,
       threatModel:         document.getElementById('ta-threatModel').value,
     });
+  }
+
+  function unmarkStepDone(n) {
+    const dot = document.getElementById('step-dot-' + n);
+    dot.classList.remove('done', 'active');
+    document.getElementById('step-num-' + n).textContent = String(n);
+  }
+
+  function goBackFromStep2() {
+    unmarkStepDone(1);
+    showSection(1);
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('reqSpinner').style.display = 'flex';
+    document.getElementById('reqOutputPre').style.display = 'none';
+    document.getElementById('reqOutputPre').textContent = '';
+    document.getElementById('reqReviewArea').style.display = 'none';
+    rawOutput = ''; activeOutputPre = null;
+    vscode.postMessage({ command: 'goBack', fromStep: 'review-requirements' });
+  }
+
+  function goBackFromStep3() {
+    unmarkStepDone(2);
+    showSection(2);
+    document.getElementById('reqSpinner').style.display = 'none';
+    document.getElementById('reqOutputPre').style.display = 'none';
+    document.getElementById('reqReviewArea').style.display = '';
+    document.getElementById('confirmReqBtn').disabled = false;
+    document.getElementById('designSpinner').style.display = 'flex';
+    document.getElementById('designOutputPre').style.display = 'none';
+    document.getElementById('designOutputPre').textContent = '';
+    rawOutput = ''; activeOutputPre = null;
+    vscode.postMessage({ command: 'goBack', fromStep: 'gen-design' });
+  }
+
+  function goBackFromStep4() {
+    unmarkStepDone(3);
+    unmarkStepDone(2);
+    showSection(2);
+    document.getElementById('reqSpinner').style.display = 'none';
+    document.getElementById('reqOutputPre').style.display = 'none';
+    document.getElementById('reqReviewArea').style.display = '';
+    document.getElementById('confirmReqBtn').disabled = false;
+    document.getElementById('filesSection').style.display = 'none';
+    document.getElementById('fileList').innerHTML = '';
+    document.getElementById('issueSection').style.display = 'none';
+    document.getElementById('issueSection').style.borderLeft = '';
+    document.getElementById('issueLabel').textContent = '';
+    document.getElementById('issueContent').innerHTML = '';
+    document.getElementById('createIssueBtn').disabled = false;
+    document.getElementById('backFromStep4Btn').disabled = false;
+    rawOutput = ''; activeOutputPre = null;
+    vscode.postMessage({ command: 'goBack', fromStep: 'review-design' });
+  }
+
+  function startNewRequirement() {
+    unmarkStepDone(1);
+    unmarkStepDone(2);
+    unmarkStepDone(3);
+    unmarkStepDone(4);
+
+    document.getElementById('moduleName').value = '';
+    document.getElementById('reqId').value = '';
+    document.getElementById('description').value = '';
+    document.getElementById('validationError').textContent = '';
+    document.getElementById('submitBtn').disabled = false;
+
+    document.getElementById('reqSpinner').style.display = 'flex';
+    document.getElementById('reqOutputPre').style.display = 'none';
+    document.getElementById('reqOutputPre').textContent = '';
+    document.getElementById('reqReviewArea').style.display = 'none';
+    document.getElementById('confirmReqBtn').disabled = false;
+
+    document.getElementById('designSpinner').style.display = 'flex';
+    document.getElementById('designOutputPre').style.display = 'none';
+    document.getElementById('designOutputPre').textContent = '';
+
+    ['ta-architectureDiagram','ta-adr','ta-openApiSpec','ta-dataModel','ta-threatModel'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('filesSection').style.display = 'none';
+    document.getElementById('fileList').innerHTML = '';
+    document.getElementById('issueSection').style.display = 'none';
+    document.getElementById('issueSection').style.borderLeft = '';
+    document.getElementById('issueLabel').textContent = '';
+    document.getElementById('issueContent').innerHTML = '';
+    document.getElementById('createIssueBtn').disabled = false;
+    document.getElementById('backFromStep4Btn').disabled = false;
+    document.getElementById('newRequirementBtn').disabled = false;
+
+    rawOutput = ''; activeOutputPre = null;
+    showSection(1);
+    vscode.postMessage({ command: 'restart' });
   }
 
   document.addEventListener('keydown', e => {
@@ -822,6 +990,14 @@ class RequirementPanel {
     } else if (msg.command === 'aiDone') {
       const a = msg.artifacts || {};
       if (msg.step === 'review-design') {
+        const selected = msg.selectedArtifacts || ['Architecture Diagram','ADR','OpenAPI Spec','Data Model','Threat Model'];
+        const artifactGroupMap = {
+          'Architecture Diagram': 'group-architectureDiagram',
+          'ADR':                  'group-adr',
+          'OpenAPI Spec':         'group-openApiSpec',
+          'Data Model':           'group-dataModel',
+          'Threat Model':         'group-threatModel',
+        };
         showSection(4);
         markStepDone(3);
         document.getElementById('designSpinner').style.display = 'none';
@@ -830,9 +1006,11 @@ class RequirementPanel {
         document.getElementById('ta-openApiSpec').value       = a.openApiSpec || '';
         document.getElementById('ta-dataModel').value         = a.dataModel || '';
         document.getElementById('ta-threatModel').value       = a.threatModel || '';
+        for (const [name, groupId] of Object.entries(artifactGroupMap)) {
+          document.getElementById(groupId).style.display = selected.includes(name) ? '' : 'none';
+        }
       } else {
         document.getElementById('reqSpinner').style.display = 'none';
-        document.getElementById('ta-productRequirements').value = a.productRequirements || '';
         document.getElementById('ta-userStories').value         = a.userStories || '';
         document.getElementById('ta-acceptanceCriteria').value  = a.acceptanceCriteria || '';
         document.getElementById('ta-backlogItems').value        = a.backlogItems || '';
@@ -884,9 +1062,11 @@ class RequirementPanel {
       document.getElementById('issueLabel').textContent = 'GitHub Issue — Not Created';
       document.getElementById('issueContent').textContent = msg.text;
       document.getElementById('createIssueBtn').disabled = false;
+      document.getElementById('backFromStep4Btn').disabled = false;
 
-    } else if (msg.command === 'issueCancelled') {
+    } else if (msg.command === 'confirmCancelled') {
       document.getElementById('createIssueBtn').disabled = false;
+      document.getElementById('backFromStep4Btn').disabled = false;
     }
   });
 </script>

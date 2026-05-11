@@ -1,10 +1,20 @@
-# 00 · Requirement Phase Checklist
+# 00 · Requirement & Plan Phase Checklist
 
 ## Intake
 
 - [ ] Requirements text has been entered by the user.
 - [ ] Requirements are specific enough for AI to generate meaningful artifacts.
 - [ ] Constraints, deadlines, and compliance requirements are included.
+- [ ] Work item is linked.
+- [ ] Scope is understood.
+- [ ] Dependencies are identified.
+
+## Required Inputs
+
+- [ ] docs/lifecycle/00-requirement.md reviewed.
+- [ ] docs/prompts/00-requirement.md reviewed.
+- [ ] docs/agents/requirement-agent.md reviewed.
+- [ ] Constraints and assumptions collected.
 
 ## Artifact Generation
 
@@ -22,8 +32,19 @@
 - [ ] User stories follow "As a / I want / So that" format.
 - [ ] Acceptance criteria are measurable and linked to stories.
 - [ ] Planning notes capture known risks and open questions.
+- [ ] Effort and risk estimation complete.
+- [ ] Backlog prioritized.
+
+## AI Usage
+
+- [ ] AI context is limited to necessary information.
+- [ ] No secrets are included in prompts.
+- [ ] AI assumptions are documented.
+- [ ] AI output has been reviewed.
+- [ ] Validation evidence is attached.
 
 ## Handoff
 
 - [ ] All artifacts reviewed and accepted by stakeholder or tech lead.
-- [ ] Ready to hand off to the PLAN phase (01 · Plan).
+- [ ] Design constraints and open questions are captured for DESIGN.
+- [ ] Ready to hand off to the DESIGN phase (02 · Design).

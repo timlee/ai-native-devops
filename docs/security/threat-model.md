@@ -1,21 +1,20 @@
 # Threat Model
 
-> Module: Auth | ID: REQ-003
+> Module: register | ID: REQ-006
 
-| # | Component | STRIDE Category | Threat | Mitigation |
+### STRIDE Analysis — Registration Module
+
+| # | Threat Category | Threat Description | Attack Vector | Mitigation |
 |---|---|---|---|---|
-| T-01 | `/login` | **Spoofing** | Attacker submits stolen credentials | bcrypt cost ≥ 12 slows offline attacks; account lockout after 5 failures/15 min |
-| T-02 | `/login` | **Spoofing** | Credential stuffing at scale | Rate limiting per IP + per account at API Gateway; CAPTCHA for high-risk signals |
-| T-03 | JWT (access token) | **Tampering** | Attacker forges or modifies JWT payload | RS256 signature verification; reject tokens with invalid `kid` or missing `alg` |
-| T-04 | Refresh token | **Tampering** | Attacker replays a used refresh token | Single-use enforcement via Redis `used` flag; reuse triggers immediate session revocation |
-| T-05 | Transport layer | **Interception** | Token theft over plain HTTP | TLS enforced at gateway; plain HTTP rejected with `400`; HSTS header set |
-| T-06 | Redis | **Tampering** | Attacker modifies blocklist or lockout state | Redis AUTH + TLS in transit; Redis network isolated to internal VPC; no public exposure |
-| T-07 | `/introspect` | **Information Disclosure** | Leaking user PII or internal claims | Introspection requires `basicAuth`; response excludes sensitive fields; no PII in errors |
-| T-08 | Audit logs | **Repudiation** | Actor denies performing an auth action | Immutable append-only audit log; includes `user_id`, `ip_address`, `timestamp`, `outcome` |
-| T-09 | Password store | **Information Disclosure** | DB breach exposes plaintext passwords | Only bcrypt hashes stored; cost ≥ 12; no reversible encryption |
-| T-10 | RS256 private key | **Information Disclosure** | Private key exfiltrated from service | Key stored in secrets manager (Vault / AWS Secrets Manager); never logged or embedded in code |
-| T-11 | `/login` endpoint | **Denial of Service** | Flood of auth requests exhausts bcrypt CPU | Global rate limit at gateway; async bcrypt worker pool with queue depth limit; Prometheus alert on saturation |
-| T-12 | Account lockout | **Denial of Service** | Adversary deliberately locks legitimate accounts | Lockout triggers alert; unlock via admin endpoint with MFA; Retry-After communicated to user |
-| T-13 | JWKS endpoint | **Elevation of Privilege** | Attacker publishes rogue public key | JWKS served from authenticated, immutable path; downstream services pin `kid`; key rotation requires explicit approval |
-| T-14 | Token claims | **Elevation of Privilege** | Inflated roles/scopes in JWT | Scopes and roles sourced exclusively from DB at token issuance; not accepted from client input |
-| T-15 | Audit log sink | **Repudiation** | Log events dropped under load | Async log pipeline with at-least-once delivery guarantee; dead-letter queue for failed log writes; SLA: within 1 second |
+| T-01 | **Spoofing** | Attacker registers with someone else's email to claim identity | Registration form | Email verification required before account activation |
+| T-02 | **Spoofing** | Token forgery to activate account without owning email | Verify-email endpoint | 256-bit random token; SHA-256 hash stored server-side; constant-time comparison |
+| T-03 | **Tampering** | SQL injection via email or password fields | API request body | Parameterized queries / ORM; server-side input sanitization |
+| T-04 | **Tampering** | XSS payload stored in email field rendered in UI | Email field | Output encoding; Content-Security-Policy header; input sanitization |
+| T-05 | **Repudiation** | User denies registering account | Registration flow | Immutable audit log: `created_at`, IP address, user-agent stored at registration |
+| T-06 | **Information Disclosure** | Duplicate email error reveals account existence | `POST /auth/register` → 409 | Return generic message: *"If this email is not registered, you will receive a confirmation."* — evaluate per UX policy |
+| T-07 | **Information Disclosure** | Password hash exposed via data breach | Database compromise | bcrypt cost ≥ 12; hash never returned in API responses; DB encryption at rest |
+| T-08 | **Information Disclosure** | Verification token intercepted in transit | Email link / network | TLS enforced on all endpoints; token single-use and TTL-bound |
+| T-09 | **Denial of Service** | Mass registration floods DB and email service | Registration endpoint | Rate limiting (e.g., 5 req/IP/min) at API Gateway; CAPTCHA for repeated failures |
+| T-10 | **Denial of Service** | bcrypt cost causes CPU exhaustion under concurrent load | High concurrency | Worker pool / async hashing; load test to validate 3s SLA at P99 |
+| T-11 | **Elevation of Privilege** | Inactive account bypasses auth checks to access protected resources | Auth middleware | `is_active` flag checked on every authentication attempt; denied if `false` |
+| T-12 | **Elevation of Privilege** | Mass account creation for credential stuffing on other systems | Automated scripts | Rate limiting; disposable email domain blocklist; abuse monitoring alerts |

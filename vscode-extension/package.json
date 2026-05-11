@@ -2,7 +2,7 @@
   "name": "ai-native-devops",
   "displayName": "AI-Native DevOps",
   "description": "Guide software development through the 11-phase AI-native DevOps lifecycle using Claude, Codex, or GitHub Copilot APIs",
-  "version": "0.2.5",
+  "version": "0.3.6",
   "publisher": "ai-native-devops",
   "license": "MIT",
   "repository": {
@@ -36,7 +36,10 @@
   "main": "./out/extension.js",
   "contributes": {
     "authentication": [
-      { "id": "github", "label": "GitHub" }
+      {
+        "id": "github",
+        "label": "GitHub"
+      }
     ],
     "viewsContainers": {
       "activitybar": [
@@ -113,8 +116,13 @@
         "category": "AI DevOps"
       },
       {
-        "command": "aiNativeDevOps.runPlanDesignPipeline",
-        "title": "Run Plan & Design Pipeline",
+        "command": "aiNativeDevOps.openRequirement",
+        "title": "Open Requirement Intake",
+        "category": "AI DevOps"
+      },
+      {
+        "command": "aiNativeDevOps.openCodeWorkflow",
+        "title": "Open Code Workflow",
         "category": "AI DevOps"
       }
     ],
@@ -158,10 +166,10 @@
         },
         "aiNativeDevOps.currentPhase": {
           "type": "number",
-          "minimum": 1,
+          "minimum": 0,
           "maximum": 11,
-          "default": 1,
-          "description": "Current active lifecycle phase (1-11)"
+          "default": 0,
+          "description": "Current active lifecycle phase (0-11)"
         },
         "aiNativeDevOps.repoRoot": {
           "type": "string",
@@ -198,24 +206,40 @@
           "type": "string",
           "default": "",
           "description": "GitHub repository name for issue creation. Auto-detected from git remote if empty."
+        },
+        "aiNativeDevOps.approvedCommands": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["npm test", "npm run lint", "npm run build"],
+          "description": "Shell commands allowed to run from the Code Workflow panel (Step 4)."
         }
       }
     },
     "menus": {
       "view/item/context": [
         {
+          "command": "aiNativeDevOps.openRequirement",
+          "when": "view == aiNativeDevOps.lifecycle && viewItem == phaseRequirement",
+          "group": "inline@0"
+        },
+        {
+          "command": "aiNativeDevOps.openCodeWorkflow",
+          "when": "view == aiNativeDevOps.lifecycle && viewItem == phaseCode",
+          "group": "inline@0"
+        },
+        {
           "command": "aiNativeDevOps.openPhase",
-          "when": "view == aiNativeDevOps.lifecycle && viewItem == phase",
+          "when": "view == aiNativeDevOps.lifecycle && (viewItem == phase || viewItem == phaseRequirement || viewItem == phaseCode)",
           "group": "inline@1"
         },
         {
           "command": "aiNativeDevOps.runPrompt",
-          "when": "view == aiNativeDevOps.lifecycle && viewItem == phase",
+          "when": "view == aiNativeDevOps.lifecycle && (viewItem == phase || viewItem == phaseRequirement || viewItem == phaseCode)",
           "group": "inline@2"
         },
         {
           "command": "aiNativeDevOps.openChecklist",
-          "when": "view == aiNativeDevOps.lifecycle && viewItem == phase",
+          "when": "view == aiNativeDevOps.lifecycle && (viewItem == phase || viewItem == phaseRequirement || viewItem == phaseCode)",
           "group": "inline@3"
         }
       ]

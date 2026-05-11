@@ -5,7 +5,10 @@ import * as vscode from "vscode";
 import { PHASES, Phase } from "./phases";
 import { LifecycleProvider } from "./lifecycleProvider";
 import { PhasePanel } from "./phasePanel";
+import { HomePanel } from "./homePanel";
 import { ChecklistPanel } from "./checklistPanel";
+import { RequirementPanel } from "./requirementPanel";
+import { CodePanel } from "./codePanel";
 import { AiOutputSink, AiRunner } from "./aiRunner";
 import {
   buildAutomationPrompt,
@@ -78,12 +81,20 @@ export function activate(context: vscode.ExtensionContext) {
       }
     ),
 
-    // Dashboard — opens the current phase guide
+    // Dashboard — opens the lifecycle overview with all phases clickable
     vscode.commands.registerCommand("aiNativeDevOps.openDashboard", () => {
-      const p = pickCurrentPhase();
-      if (!p) return;
-      PhasePanel.show(p, context, (ph, prompt, panel) =>
-        aiRunner.run(ph, prompt ?? "", panel)
+      HomePanel.show(
+        context,
+        (phase) =>
+          PhasePanel.show(phase, context, (ph, prompt, panel) =>
+            aiRunner.run(ph, prompt ?? "", panel)
+          ),
+        (phase) => {
+          const panel = PhasePanel.show(phase, context, (ph, prompt, pnl) =>
+            aiRunner.run(ph, prompt ?? "", pnl)
+          );
+          aiRunner.run(phase, `Follow the AI-native DevOps guidelines for phase: ${phase.label}`, panel);
+        }
       );
     }),
 
@@ -269,11 +280,23 @@ export function activate(context: vscode.ExtensionContext) {
       }
     ),
 
-    // Run Plan + Design pipeline from a single requirements input
+    // Open requirement intake panel (Phase 00)
     vscode.commands.registerCommand(
-      "aiNativeDevOps.runPlanDesignPipeline",
-      async () => {
-        await runPlanDesignPipeline(context, aiRunner);
+      "aiNativeDevOps.openRequirement",
+      (phaseArg?: unknown) => {
+        const p = resolvePhaseArg(phaseArg) ?? PHASES.find(ph => ph.id === 0);
+        if (!p) return;
+        RequirementPanel.show(p, context, aiRunner);
+      }
+    ),
+
+    // Open code workflow panel (Phase 03)
+    vscode.commands.registerCommand(
+      "aiNativeDevOps.openCodeWorkflow",
+      (phaseArg?: unknown) => {
+        const p = resolvePhaseArg(phaseArg) ?? PHASES.find(ph => ph.key === "code");
+        if (!p) return;
+        CodePanel.show(p, context, aiRunner);
       }
     ),
 
@@ -391,7 +414,7 @@ export function activate(context: vscode.ExtensionContext) {
 function pickCurrentPhase(): Phase | undefined {
   const id = vscode.workspace
     .getConfiguration("aiNativeDevOps")
-    .get<number>("currentPhase", 1);
+    .get<number>("currentPhase", 0);
   return PHASES.find((p) => p.id === id);
 }
 
@@ -427,102 +450,6 @@ function updateStatusBar(item: vscode.StatusBarItem) {
 }
 
 export function deactivate() {}
-
-// ── Plan & Design Pipeline ────────────────────────────────────────────────────
-
-async function runPlanDesignPipeline(
-  context: vscode.ExtensionContext,
-  aiRunner: AiRunner
-): Promise<void> {
-  const requirements = await vscode.window.showInputBox({
-    title: "Run Plan & Design Pipeline",
-    prompt: "Enter requirements — feature request, problem statement, or stakeholder brief",
-    placeHolder: "e.g. Add dark mode support to the VS Code extension webviews",
-    ignoreFocusOut: true,
-  });
-  if (!requirements?.trim()) { return; }
-
-  const repoRoot = resolveRepoRoot(context);
-  const planPhase   = PHASES.find(p => p.id === 1)!;
-  const designPhase = PHASES.find(p => p.id === 2)!;
-  const planSpec    = getAgentSpecByPhase(1)!;
-  const designSpec  = getAgentSpecByPhase(2)!;
-  const planTrigger   = planSpec.triggers.find(t => t.id === "issue_opened") ?? planSpec.triggers[0];
-  const designTrigger = designSpec.triggers[0];
-
-  await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: "Plan & Design Pipeline", cancellable: false },
-    async (progress) => {
-
-      // ── 01 · Plan ─────────────────────────────────────────────────────────
-      progress.report({ increment: 0, message: "01 · Plan — running PLAN agent…" });
-
-      const planPrompt = buildAutomationPrompt(
-        planPhase, planSpec, planTrigger,
-        requirements.trim(),
-        readPhaseRequirements(repoRoot, planPhase)
-      );
-
-      let planOutput = "";
-      const planPanel = PhasePanel.show(planPhase, context, (ph, pr, pnl) =>
-        aiRunner.run(ph, pr ?? "", pnl)
-      );
-      await aiRunner.run(planPhase, planPrompt, captureSink(planPanel, c => { planOutput += c; }));
-      ensureTextFile(repoRoot, "plan/01-plan-output.md", planOutput);
-
-      // ── 02 · Design ───────────────────────────────────────────────────────
-      progress.report({ increment: 50, message: "02 · Design — running DESIGN agent…" });
-
-      const designContext = [
-        "Requirements:\n" + requirements.trim(),
-        "",
-        "Plan output (from 01 · Plan phase):\n" + planOutput,
-      ].join("\n");
-
-      const designPrompt = buildAutomationPrompt(
-        designPhase, designSpec, designTrigger,
-        designContext,
-        readPhaseRequirements(repoRoot, designPhase)
-      );
-
-      let designOutput = "";
-      const designPanel = PhasePanel.show(designPhase, context, (ph, pr, pnl) =>
-        aiRunner.run(ph, pr ?? "", pnl)
-      );
-      await aiRunner.run(designPhase, designPrompt, captureSink(designPanel, c => { designOutput += c; }));
-      ensureTextFile(repoRoot, "plan/02-design-output.md", designOutput);
-
-      // ── Build .vsix ───────────────────────────────────────────────────────
-      progress.report({ increment: 90, message: "Building .vsix package…" });
-      let newVersion = "<build-failed>";
-      try {
-        newVersion = await bumpAndPackage(context.extensionPath);
-      } catch (err) {
-        vscode.window.showWarningMessage(
-          `Artifacts saved — .vsix build failed: ${String(err)}`
-        );
-      }
-
-      progress.report({ increment: 100, message: "Done." });
-
-      const choice = await vscode.window.showInformationMessage(
-        `Pipeline complete — ai-native-devops-${newVersion}.vsix generated`,
-        "Open Plan Output",
-        "Open Design Output"
-      );
-
-      const target =
-        choice === "Open Plan Output"   ? path.join(repoRoot, "plan/01-plan-output.md") :
-        choice === "Open Design Output" ? path.join(repoRoot, "plan/02-design-output.md") :
-        undefined;
-
-      if (target) {
-        const doc = await vscode.workspace.openTextDocument(target);
-        await vscode.window.showTextDocument(doc);
-      }
-    }
-  );
-}
 
 function captureSink(delegate: AiOutputSink, onChunk: (chunk: string) => void): AiOutputSink {
   return {
@@ -715,9 +642,9 @@ async function scaffoldGithubWebhookWorkflows(
     "  issues: read",
     "",
     "jobs:",
-    "  enqueue-plan-or-design:",
+    "  enqueue-plan:",
     "    runs-on: ubuntu-latest",
-    "    if: github.event_name == 'workflow_dispatch' || github.event.action == 'opened' || (github.event.action == 'labeled' && contains(github.event.label.name, 'ready-for-design'))",
+    "    if: github.event_name == 'workflow_dispatch' || github.event.action == 'opened'",
     "    steps:",
     "      - name: Validate webhook secrets",
     "        run: |",
@@ -730,10 +657,6 @@ async function scaffoldGithubWebhookWorkflows(
     "        run: |",
     "          PHASE=plan",
     "          TRIGGER=github-issue",
-    "          if [ \"${{ github.event.action }}\" = \"labeled\" ] && [ \"${{ github.event.label.name }}\" = \"ready-for-design\" ]; then",
-    "            PHASE=design",
-    "            TRIGGER=ready-for-design",
-    "          fi",
     "          echo \"phase=$PHASE\" >> $GITHUB_OUTPUT",
     "          echo \"trigger=$TRIGGER\" >> $GITHUB_OUTPUT",
     "",

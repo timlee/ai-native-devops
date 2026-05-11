@@ -129,7 +129,7 @@ export function ensureTextFile(repoRoot: string, relativePath: string, content: 
 }
 
 /** Escape HTML for safe injection into webview */
-function escapeHtml(str: string): string {
+export function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -138,7 +138,7 @@ function escapeHtml(str: string): string {
 }
 
 /** Very lightweight markdown → HTML (headings, bold, code, lists, horizontal rules) */
-function mdToHtml(md: string): string {
+export function mdToHtml(md: string): string {
   const lines = md.split("\n");
   const out: string[] = [];
   let inCode = false;
