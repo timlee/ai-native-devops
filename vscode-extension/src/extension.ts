@@ -5,6 +5,7 @@ import * as vscode from "vscode";
 import { PHASES, Phase } from "./phases";
 import { LifecycleProvider } from "./lifecycleProvider";
 import { PhasePanel } from "./phasePanel";
+import { HomePanel } from "./homePanel";
 import { ChecklistPanel } from "./checklistPanel";
 import { RequirementPanel } from "./requirementPanel";
 import { AiOutputSink, AiRunner } from "./aiRunner";
@@ -79,12 +80,20 @@ export function activate(context: vscode.ExtensionContext) {
       }
     ),
 
-    // Dashboard — opens the current phase guide
+    // Dashboard — opens the lifecycle overview with all phases clickable
     vscode.commands.registerCommand("aiNativeDevOps.openDashboard", () => {
-      const p = pickCurrentPhase();
-      if (!p) return;
-      PhasePanel.show(p, context, (ph, prompt, panel) =>
-        aiRunner.run(ph, prompt ?? "", panel)
+      HomePanel.show(
+        context,
+        (phase) =>
+          PhasePanel.show(phase, context, (ph, prompt, panel) =>
+            aiRunner.run(ph, prompt ?? "", panel)
+          ),
+        (phase) => {
+          const panel = PhasePanel.show(phase, context, (ph, prompt, pnl) =>
+            aiRunner.run(ph, prompt ?? "", pnl)
+          );
+          aiRunner.run(phase, `Follow the AI-native DevOps guidelines for phase: ${phase.label}`, panel);
+        }
       );
     }),
 

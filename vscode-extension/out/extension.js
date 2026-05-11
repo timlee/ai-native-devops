@@ -42,6 +42,7 @@ const vscode = __importStar(require("vscode"));
 const phases_1 = require("./phases");
 const lifecycleProvider_1 = require("./lifecycleProvider");
 const phasePanel_1 = require("./phasePanel");
+const homePanel_1 = require("./homePanel");
 const checklistPanel_1 = require("./checklistPanel");
 const requirementPanel_1 = require("./requirementPanel");
 const aiRunner_1 = require("./aiRunner");
@@ -87,12 +88,12 @@ function activate(context) {
             return;
         checklistPanel_1.ChecklistPanel.show(p, context);
     }), 
-    // Dashboard — opens the current phase guide
+    // Dashboard — opens the lifecycle overview with all phases clickable
     vscode.commands.registerCommand("aiNativeDevOps.openDashboard", () => {
-        const p = pickCurrentPhase();
-        if (!p)
-            return;
-        phasePanel_1.PhasePanel.show(p, context, (ph, prompt, panel) => aiRunner.run(ph, prompt ?? "", panel));
+        homePanel_1.HomePanel.show(context, (phase) => phasePanel_1.PhasePanel.show(phase, context, (ph, prompt, panel) => aiRunner.run(ph, prompt ?? "", panel)), (phase) => {
+            const panel = phasePanel_1.PhasePanel.show(phase, context, (ph, prompt, pnl) => aiRunner.run(ph, prompt ?? "", pnl));
+            aiRunner.run(phase, `Follow the AI-native DevOps guidelines for phase: ${phase.label}`, panel);
+        });
     }), 
     // Select AI provider and securely store API keys
     vscode.commands.registerCommand("aiNativeDevOps.selectProvider", async () => {

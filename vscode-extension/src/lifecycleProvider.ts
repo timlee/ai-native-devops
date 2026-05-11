@@ -9,7 +9,7 @@ export class LifecycleTreeItem extends vscode.TreeItem {
     public readonly resourceUri?: vscode.Uri
   ) {
     super(phase.label, vscode.TreeItemCollapsibleState.None);
-    this.contextValue = "phase";
+    this.contextValue = phase.id === 0 ? "phaseRequirement" : "phase";
     this.description = isActive ? "active" : "";
 
     const tooltip = new vscode.MarkdownString(
@@ -28,8 +28,8 @@ export class LifecycleTreeItem extends vscode.TreeItem {
     }
 
     this.command = {
-      command: "aiNativeDevOps.openPhase",
-      title: "Open Phase Guide",
+      command: phase.id === 0 ? "aiNativeDevOps.openRequirement" : "aiNativeDevOps.openPhase",
+      title: phase.id === 0 ? "Open Requirement Intake" : "Open Phase Guide",
       arguments: [phase],
     };
   }
