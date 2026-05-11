@@ -2,7 +2,7 @@
   "name": "ai-native-devops",
   "displayName": "AI-Native DevOps",
   "description": "Guide software development through the 11-phase AI-native DevOps lifecycle using Claude, Codex, or GitHub Copilot APIs",
-  "version": "0.3.7",
+  "version": "0.3.6",
   "publisher": "ai-native-devops",
   "license": "MIT",
   "repository": {

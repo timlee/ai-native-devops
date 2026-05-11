@@ -1,7 +1,7 @@
 # User Stories
 
-> Module: build | ID: FR001
+> Module: test | ID: tst-001
 
-As a **software engineer**, I want an automated CI pipeline that triggers on every code push to build, test, and report the software artifact status, so that integration issues are detected immediately and teams can ship reliable software faster.
+As a **QA engineer**, I want to validate all API endpoints against the OpenAPI specification so that conformance is automatically verified and regressions are caught before release.
 
 ---

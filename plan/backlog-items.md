@@ -1,17 +1,17 @@
 # Backlog Items
 
-> Module: build | ID: FR001
+> Module: test | ID: tst-001
 
 | Priority | Task | Effort |
 |----------|------|--------|
-| **P0** | Define and commit CI pipeline-as-code (e.g., `ci.yml`) to repository | S |
-| **P0** | Configure branch trigger rules for `main` and `develop` | S |
-| **P0** | Implement build and unit test stages in the pipeline | M |
-| **P0** | Integrate artifact versioning and publishing to artifact registry | M |
-| **P1** | Configure build failure notifications to developer channels | S |
-| **P1** | Enforce minimum 80% code coverage gate in pipeline | S |
-| **P1** | Add mandatory SAST security scanning stage | M |
-| **P1** | Set pipeline timeout and performance baseline (≤ 10 min) | S |
-| **P2** | Expose pipeline results and logs via team dashboard | M |
-| **P2** | Document CI pipeline runbook and onboarding guide | S |
-| **P2** | Implement pipeline caching strategy to optimize build times | L |
+| **P0** | Parse and import the OpenAPI document as the single source of truth for test generation | S |
+| **P0** | Implement contract tests validating request/response schemas against the OpenAPI spec | M |
+| **P0** | Cover all declared HTTP status codes (2xx, 4xx, 5xx) per endpoint | M |
+| **P0** | Integrate tests into CI pipeline with pass/fail gate | S |
+| **P1** | Generate test coverage report and enforce 80% threshold | S |
+| **P1** | Test authentication/authorization schemes declared in the OpenAPI spec | M |
+| **P1** | Validate required vs. optional fields and boundary conditions (min/max, pattern) | M |
+| **P1** | Audit codebase for undocumented endpoints not present in the OpenAPI spec | S |
+| **P2** | Add negative/fuzzing test cases for malformed payloads | L |
+| **P2** | Publish structured test report artifact (JUnit XML) as CI build output | S |
+| **P2** | Document test strategy and traceability matrix linking tests to OpenAPI operations | M |

@@ -12,8 +12,7 @@
       "Bash(Get-ChildItem -Path . -Depth 0)",
       "Bash(Select-Object Name, Mode)",
       "Bash(npx vsce *)",
-      "Bash(npm version *)",
-      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\wtlee\\\\Documents\\\\GitHub\\\\ai-native-devops\\\\vscode-extension\\\\src\" -Recurse -Name)"
+      "Bash(npm version *)"
     ]
   }
 }
