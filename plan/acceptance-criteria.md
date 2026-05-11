@@ -1,14 +1,14 @@
 # Acceptance Criteria
 
-> Module: test | ID: test
+> Module: test | ID: tst-001
 
-- [ ] The `test` module exists and is identifiable by ID `test`.
-- [ ] Core functionality described in the module description is implemented and verifiable.
-- [ ] Unit tests cover ≥ 80% of the module's code paths.
-- [ ] Integration tests confirm the module works correctly within the broader system.
-- [ ] No critical or high-severity security vulnerabilities are present (verified via static analysis).
-- [ ] CI/CD pipeline runs all tests automatically on every pull request.
-- [ ] Documentation (inline and/or README) describes module purpose, usage, and configuration.
-- [ ] Performance benchmarks meet agreed thresholds (e.g., response time, resource usage).
+- [ ] Every endpoint defined in the OpenAPI doc has at least one corresponding test case
+- [ ] Request/response schemas are validated against OpenAPI-defined schemas for all test cases
+- [ ] All required fields, data types, and constraints specified in the OpenAPI doc are covered by tests
+- [ ] HTTP status codes returned match those declared in the OpenAPI spec for both success and error paths
+- [ ] Tests run automatically in CI and produce a structured report (e.g., JUnit XML or JSON)
+- [ ] Code coverage for API handler logic meets or exceeds 80%
+- [ ] No undocumented endpoints exist in the codebase that are absent from the OpenAPI spec
+- [ ] Security schemes defined in the OpenAPI doc (e.g., Bearer, API Key) are tested for enforcement
 
 ---

@@ -1,26 +1,57 @@
-# Design Draft
+# Architecture Diagram
 
-## Problem Statement
+> Module: test | ID: tst-001
 
-Describe the user problem and scope.
+```mermaid
+flowchart TD
+    subgraph CI["CI Pipeline"]
+        trigger["Git Push / PR Trigger"]
+        gate["Pass/Fail Quality Gate"]
+        report["JUnit XML Report Artifact"]
+    end
 
-## Architecture Options
+    subgraph TestFramework["Test Framework (pytest + schemathesis)"]
+        loader["OpenAPI Loader\n(single source of truth)"]
+        contract["Contract Test Runner\nSchema Validation"]
+        status["HTTP Status Code\nAssertion Suite"]
+        auth["Auth/Security Scheme\nTest Suite"]
+        boundary["Boundary & Negative\nTest Suite"]
+        coverage["Coverage Collector\n(pytest-cov ≥80%)"]
+        audit["Endpoint Auditor\n(undocumented route detector)"]
+    end
 
-1. Option A
-2. Option B
-3. Option C
+    subgraph TargetAPI["Target API Service"]
+        router["API Router"]
+        handlers["Endpoint Handlers"]
+        middleware["Auth Middleware\n(Bearer / API Key)"]
+        db[("Data Store")]
+    end
 
-## Decision and Trade-offs
+    openapi["openapi.yaml\n(Source of Truth)"]
 
-Document the chosen option and rationale.
+    trigger --> loader
+    openapi --> loader
+    loader --> contract
+    loader --> status
+    loader --> auth
+    loader --> boundary
+    loader --> audit
 
-## Interfaces and Data Flow
+    contract --> router
+    status --> router
+    auth --> middleware
+    boundary --> router
+    router --> handlers
+    handlers --> db
 
-- Entry points
-- Internal boundaries
-- External dependencies
+    contract --> coverage
+    status --> coverage
+    auth --> coverage
+    boundary --> coverage
 
-## Risks and Mitigations
+    coverage --> gate
+    audit --> gate
+    gate --> report
+```
 
-- Risk
-- Mitigation
+---

@@ -44,6 +44,7 @@ interface WorkflowContext {
   description: string;
   requirements?: RequirementsArtifacts;
   design?: DesignArtifacts;
+  selectedArtifacts?: string[];
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -52,6 +53,14 @@ const ISSUE_SECTIONS = [
   "User Stories",
   "Acceptance Criteria",
   "Backlog Items",
+] as const;
+
+const ALL_DESIGN_ARTIFACTS = [
+  "Architecture Diagram",
+  "ADR",
+  "OpenAPI Spec",
+  "Data Model",
+  "Threat Model",
 ] as const;
 
 const SECTION_FILES: Record<string, string> = {
@@ -80,20 +89,30 @@ function buildPrompt(moduleName: string, reqId: string, description: string): st
     "## Backlog Items",
     "",
     "Guidelines:",
-    "- User Stories: \"As a <role>, I want <goal>, so that <benefit>\" — one per bullet.",
-    "- Acceptance Criteria: measurable checkbox conditions (- [ ]) tied to each story.",
-    "- Backlog Items: prioritized list with P0/P1/P2 labels and S/M/L effort estimates.",
+    "- User Stories: Write exactly ONE user story in the form \"As a <role>, I want <goal>, so that <benefit>\".",
+    "- Acceptance Criteria: Write measurable checkbox conditions (- [ ]) that directly verify the single user story above.",
+    "- Backlog Items: Write a prioritized task list derived from the single user story with P0/P1/P2 labels and S/M/L effort estimates.",
     "",
     "Output structured Markdown only. Do not add any text before the first ## heading.",
   ].join("\n");
 }
 
+const DESIGN_ARTIFACT_DEFS: { name: string; guide: string }[] = [
+  { name: "Architecture Diagram", guide: "- Architecture Diagram: Mermaid diagram (```mermaid fenced block) showing system components, services, and data flows." },
+  { name: "ADR",                  guide: "- ADR: Architecture Decision Record — Title, Status, Context, Decision, Consequences (positive/negative)." },
+  { name: "OpenAPI Spec",         guide: "- OpenAPI Spec: Valid OpenAPI 3.1 YAML for the API surface implied by the requirements." },
+  { name: "Data Model",           guide: "- Data Model: Entity-relationship description with field types and cardinality in Markdown table format." },
+  { name: "Threat Model",         guide: "- Threat Model: STRIDE-based threat enumeration with mitigations as a Markdown table." },
+];
+
 function buildDesignPrompt(
   moduleName: string,
   reqId: string,
   description: string,
-  requirements: RequirementsArtifacts
+  requirements: RequirementsArtifacts,
+  selectedArtifacts: string[]
 ): string {
+  const selected = DESIGN_ARTIFACT_DEFS.filter(a => selectedArtifacts.includes(a.name));
   return [
     "You are the DESIGN phase AI agent.",
     "",
@@ -115,21 +134,13 @@ function buildDesignPrompt(
       ? [`## Planning Notes (confirmed by user)`, requirements.planningNotes, ""]
       : []),
     "Task:",
-    "Generate five architecture design artifacts as structured Markdown.",
+    `Generate ${selected.length} architecture design artifact${selected.length !== 1 ? "s" : ""} as structured Markdown.`,
     "Use these exact ## headings in this order (no text before the first heading):",
     "",
-    "## Architecture Diagram",
-    "## ADR",
-    "## OpenAPI Spec",
-    "## Data Model",
-    "## Threat Model",
+    ...selected.map(a => `## ${a.name}`),
     "",
     "Guidelines:",
-    "- Architecture Diagram: Mermaid diagram (```mermaid fenced block) showing system components, services, and data flows.",
-    "- ADR: Architecture Decision Record — Title, Status, Context, Decision, Consequences (positive/negative).",
-    "- OpenAPI Spec: Valid OpenAPI 3.1 YAML for the API surface implied by the requirements.",
-    "- Data Model: Entity-relationship description with field types and cardinality in Markdown table format.",
-    "- Threat Model: STRIDE-based threat enumeration with mitigations as a Markdown table.",
+    ...selected.map(a => a.guide),
     "",
     "Output structured Markdown only. Do not add any text before the first ## heading.",
   ].join("\n");
@@ -201,19 +212,21 @@ function writeDesignFiles(
   repoRoot: string,
   moduleName: string,
   reqId: string,
-  artifacts: DesignArtifacts
+  artifacts: DesignArtifacts,
+  selectedArtifacts: string[]
 ): string[] {
   const written: string[] = [];
 
-  const fileMap: Array<{ key: keyof DesignArtifacts; file: string; heading: string }> = [
-    { key: "architectureDiagram", file: "docs/architecture/design-draft.md", heading: "Architecture Diagram" },
-    { key: "adr",                 file: `docs/adr/ADR-${reqId}.md`,          heading: "ADR" },
-    { key: "openApiSpec",         file: "docs/api/openapi.yaml",              heading: "OpenAPI Spec" },
-    { key: "dataModel",           file: "docs/data/data-model.md",            heading: "Data Model" },
-    { key: "threatModel",         file: "docs/security/threat-model.md",      heading: "Threat Model" },
+  const fileMap: Array<{ key: keyof DesignArtifacts; file: string; heading: string; artifactName: string }> = [
+    { key: "architectureDiagram", file: "docs/architecture/design-draft.md", heading: "Architecture Diagram", artifactName: "Architecture Diagram" },
+    { key: "adr",                 file: `docs/adr/ADR-${reqId}.md`,          heading: "ADR",                 artifactName: "ADR" },
+    { key: "openApiSpec",         file: "docs/api/openapi.yaml",              heading: "OpenAPI Spec",        artifactName: "OpenAPI Spec" },
+    { key: "dataModel",           file: "docs/data/data-model.md",            heading: "Data Model",          artifactName: "Data Model" },
+    { key: "threatModel",         file: "docs/security/threat-model.md",      heading: "Threat Model",        artifactName: "Threat Model" },
   ];
 
-  for (const { key, file, heading } of fileMap) {
+  for (const { key, file, heading, artifactName } of fileMap) {
+    if (!selectedArtifacts.includes(artifactName)) { continue; }
     const content = artifacts[key];
     const fullPath = path.join(repoRoot, file);
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
@@ -231,6 +244,7 @@ function writeDesignFiles(
 function buildIssueBody(
   moduleName: string,
   reqId: string,
+  description: string,
   requirements: RequirementsArtifacts,
   design: DesignArtifacts | null
 ): string {
@@ -239,7 +253,9 @@ function buildIssueBody(
     `> _Generated by AI-Native DevOps extension_`,
     "",
     "---",
-    "## Requirements Artifacts",
+    "## User Requirement",
+    "",
+    description || "_Not provided._",
     "",
   ];
 
@@ -263,7 +279,8 @@ function buildIssueBody(
       ["Threat Model",         design.threatModel],
     ];
     for (const [heading, content] of designMap) {
-      lines.push(`### ${heading}`, "", content || "_Not generated._", "");
+      if (!content.trim()) { continue; }
+      lines.push(`### ${heading}`, "", content, "");
     }
   }
 
@@ -392,13 +409,19 @@ export class RequirementPanel {
             );
             break;
           case "confirmRequirements":
-            this._handleConfirmRequirements(msg as unknown as RequirementsArtifacts);
+            this._handleConfirmRequirements(
+              msg as unknown as RequirementsArtifacts,
+              (msg.selectedArtifacts as string[]) ?? [...ALL_DESIGN_ARTIFACTS]
+            );
             break;
           case "confirmDesign":
             this._handleConfirmDesign(msg as unknown as DesignArtifacts);
             break;
           case "goBack":
             this._handleGoBack((msg.fromStep as string) ?? "");
+            break;
+          case "restart":
+            this._handleRestart();
             break;
           case "openFile":
             this._openFile((msg.text as string) ?? "");
@@ -484,8 +507,17 @@ export class RequirementPanel {
     setImmediate(() => { this._cancelled = false; });
   }
 
-  private async _handleConfirmRequirements(artifacts: RequirementsArtifacts): Promise<void> {
+  private _handleRestart(): void {
+    this._cancelled = true;
+    this._rawOutput = "";
+    this._workflowCtx = { moduleName: "", reqId: "", description: "" };
+    this._step = "input";
+    setImmediate(() => { this._cancelled = false; });
+  }
+
+  private async _handleConfirmRequirements(artifacts: RequirementsArtifacts, selectedArtifacts: string[]): Promise<void> {
     this._workflowCtx.requirements = artifacts;
+    this._workflowCtx.selectedArtifacts = selectedArtifacts;
 
     const { moduleName, reqId } = this._workflowCtx;
     const sections = new Map<string, string>([
@@ -500,7 +532,7 @@ export class RequirementPanel {
     this._rawOutput = "";
     this._panel.webview.postMessage({ command: "started", step: "gen-design" });
 
-    const prompt = buildDesignPrompt(moduleName, reqId, this._workflowCtx.description, artifacts);
+    const prompt = buildDesignPrompt(moduleName, reqId, this._workflowCtx.description, artifacts, selectedArtifacts);
 
     const sink: AiOutputSink = {
       appendAiChunk: (chunk) => {
@@ -512,15 +544,15 @@ export class RequirementPanel {
         if (this._cancelled) { return; }
         const secs = parseSections(this._rawOutput);
         const designArtifacts: DesignArtifacts = {
-          architectureDiagram: secs.get("Architecture Diagram") ?? "",
-          adr:                 secs.get("ADR") ?? "",
-          openApiSpec:         secs.get("OpenAPI Spec") ?? "",
-          dataModel:           secs.get("Data Model") ?? "",
-          threatModel:         secs.get("Threat Model") ?? "",
+          architectureDiagram: selectedArtifacts.includes("Architecture Diagram") ? (secs.get("Architecture Diagram") ?? "") : "",
+          adr:                 selectedArtifacts.includes("ADR")                  ? (secs.get("ADR") ?? "")                  : "",
+          openApiSpec:         selectedArtifacts.includes("OpenAPI Spec")         ? (secs.get("OpenAPI Spec") ?? "")         : "",
+          dataModel:           selectedArtifacts.includes("Data Model")           ? (secs.get("Data Model") ?? "")           : "",
+          threatModel:         selectedArtifacts.includes("Threat Model")         ? (secs.get("Threat Model") ?? "")         : "",
         };
         this._workflowCtx.design = designArtifacts;
         this._step = "review-design";
-        this._panel.webview.postMessage({ command: "aiDone", artifacts: designArtifacts, step: "review-design" });
+        this._panel.webview.postMessage({ command: "aiDone", artifacts: designArtifacts, step: "review-design", selectedArtifacts });
       },
       aiError: (msg) => {
         if (this._cancelled) { return; }
@@ -536,8 +568,18 @@ export class RequirementPanel {
 
     const { moduleName, reqId } = this._workflowCtx;
 
-    const writtenDesign = writeDesignFiles(this._repoRoot, moduleName, reqId, artifacts);
+    const writtenDesign = writeDesignFiles(this._repoRoot, moduleName, reqId, artifacts, this._workflowCtx.selectedArtifacts ?? [...ALL_DESIGN_ARTIFACTS]);
     this._panel.webview.postMessage({ command: "filesReady", files: writtenDesign, phase: "design" });
+
+    const choice = await vscode.window.showInformationMessage(
+      `Create GitHub issue "[${reqId}] ${moduleName}"?`,
+      { modal: true },
+      "Create Issue"
+    );
+    if (choice !== "Create Issue") {
+      this._panel.webview.postMessage({ command: "confirmCancelled" });
+      return;
+    }
 
     this._step = "complete";
     try {
@@ -559,7 +601,7 @@ export class RequirementPanel {
 
       const token = await getGithubToken();
       const title = `[${reqId}] ${moduleName}`;
-      const body  = buildIssueBody(moduleName, reqId, this._workflowCtx.requirements!, artifacts);
+      const body  = buildIssueBody(moduleName, reqId, this._workflowCtx.description, this._workflowCtx.requirements!, artifacts);
       const { url, number } = await createGithubIssue(
         token, owner, repo, title, body, ["requirement", "design", "ai-generated"]
       );
@@ -718,6 +760,8 @@ export class RequirementPanel {
   /* Artifact review */
   .review-hint { color: var(--vscode-descriptionForeground); font-size: 0.88em; margin-bottom: 16px; }
   .artifact-group { margin-bottom: 16px; }
+  .artifact-select-group { margin-bottom: 16px; }
+  .cb-label { display: block; margin-bottom: 5px; font-size: 0.9em; cursor: pointer; }
   .artifact-label {
     display: block; font-weight: 600; font-size: 0.82em;
     text-transform: uppercase; letter-spacing: 0.05em;
@@ -806,6 +850,14 @@ export class RequirementPanel {
       <label class="artifact-label" for="ta-planningNotes">Planning Notes</label>
       <textarea class="artifact-ta" id="ta-planningNotes" placeholder="Add assumptions, risks, open questions, dependencies…"></textarea>
     </div>
+    <div class="artifact-select-group">
+      <p class="review-hint" style="margin-bottom:6px">Select design artifacts to generate in Step 3:</p>
+      <label class="cb-label"><input type="checkbox" class="design-cb" value="Architecture Diagram" checked> Architecture Diagram</label>
+      <label class="cb-label"><input type="checkbox" class="design-cb" value="ADR" checked> ADR — Architecture Decision Record</label>
+      <label class="cb-label"><input type="checkbox" class="design-cb" value="OpenAPI Spec" checked> OpenAPI Spec</label>
+      <label class="cb-label"><input type="checkbox" class="design-cb" value="Data Model" checked> Data Model</label>
+      <label class="cb-label"><input type="checkbox" class="design-cb" value="Threat Model" checked> Threat Model</label>
+    </div>
     <div class="button-row">
       <button class="secondary" id="backFromStep2Btn" onclick="goBackFromStep2()">&#8592; Back</button>
       <button class="primary" id="confirmReqBtn" onclick="confirmRequirements()">Confirm &amp; Continue</button>
@@ -827,28 +879,29 @@ export class RequirementPanel {
 <!-- Step 4: Review Design + Publish -->
 <section id="sectionStep4" style="display:none">
   <p class="review-hint">Review and edit each design artifact, then create the GitHub issue.</p>
-  <div class="artifact-group">
+  <div class="artifact-group" id="group-architectureDiagram">
     <label class="artifact-label" for="ta-architectureDiagram">Architecture Diagram (Mermaid)</label>
     <textarea class="artifact-ta code-ta" id="ta-architectureDiagram"></textarea>
   </div>
-  <div class="artifact-group">
+  <div class="artifact-group" id="group-adr">
     <label class="artifact-label" for="ta-adr">ADR — Architecture Decision Record</label>
     <textarea class="artifact-ta" id="ta-adr"></textarea>
   </div>
-  <div class="artifact-group">
+  <div class="artifact-group" id="group-openApiSpec">
     <label class="artifact-label" for="ta-openApiSpec">OpenAPI Spec (YAML)</label>
     <textarea class="artifact-ta code-ta" id="ta-openApiSpec"></textarea>
   </div>
-  <div class="artifact-group">
+  <div class="artifact-group" id="group-dataModel">
     <label class="artifact-label" for="ta-dataModel">Data Model</label>
     <textarea class="artifact-ta" id="ta-dataModel"></textarea>
   </div>
-  <div class="artifact-group">
+  <div class="artifact-group" id="group-threatModel">
     <label class="artifact-label" for="ta-threatModel">Threat Model</label>
     <textarea class="artifact-ta" id="ta-threatModel"></textarea>
   </div>
   <div class="button-row">
     <button class="secondary" id="backFromStep4Btn" onclick="goBackFromStep4()">&#8592; Back to Requirements</button>
+    <button class="secondary" id="newRequirementBtn" onclick="startNewRequirement()">&#8635; New Requirement</button>
     <button class="primary" id="createIssueBtn" onclick="confirmDesign()">Create GitHub Issue</button>
   </div>
 
@@ -902,12 +955,16 @@ export class RequirementPanel {
 
   function confirmRequirements() {
     document.getElementById('confirmReqBtn').disabled = true;
+    const selectedArtifacts = Array.from(
+      document.querySelectorAll('.design-cb:checked')
+    ).map(cb => cb.value);
     vscode.postMessage({
       command: 'confirmRequirements',
       userStories:         document.getElementById('ta-userStories').value,
       acceptanceCriteria:  document.getElementById('ta-acceptanceCriteria').value,
       backlogItems:        document.getElementById('ta-backlogItems').value,
       planningNotes:       document.getElementById('ta-planningNotes').value,
+      selectedArtifacts,
     });
   }
 
@@ -976,6 +1033,47 @@ export class RequirementPanel {
     vscode.postMessage({ command: 'goBack', fromStep: 'review-design' });
   }
 
+  function startNewRequirement() {
+    unmarkStepDone(1);
+    unmarkStepDone(2);
+    unmarkStepDone(3);
+    unmarkStepDone(4);
+
+    document.getElementById('moduleName').value = '';
+    document.getElementById('reqId').value = '';
+    document.getElementById('description').value = '';
+    document.getElementById('validationError').textContent = '';
+    document.getElementById('submitBtn').disabled = false;
+
+    document.getElementById('reqSpinner').style.display = 'flex';
+    document.getElementById('reqOutputPre').style.display = 'none';
+    document.getElementById('reqOutputPre').textContent = '';
+    document.getElementById('reqReviewArea').style.display = 'none';
+    document.getElementById('confirmReqBtn').disabled = false;
+
+    document.getElementById('designSpinner').style.display = 'flex';
+    document.getElementById('designOutputPre').style.display = 'none';
+    document.getElementById('designOutputPre').textContent = '';
+
+    ['ta-architectureDiagram','ta-adr','ta-openApiSpec','ta-dataModel','ta-threatModel'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('filesSection').style.display = 'none';
+    document.getElementById('fileList').innerHTML = '';
+    document.getElementById('issueSection').style.display = 'none';
+    document.getElementById('issueSection').style.borderLeft = '';
+    document.getElementById('issueLabel').textContent = '';
+    document.getElementById('issueContent').innerHTML = '';
+    document.getElementById('createIssueBtn').disabled = false;
+    document.getElementById('backFromStep4Btn').disabled = false;
+    document.getElementById('newRequirementBtn').disabled = false;
+
+    rawOutput = ''; activeOutputPre = null;
+    showSection(1);
+    vscode.postMessage({ command: 'restart' });
+  }
+
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { submitForm(); }
   });
@@ -1016,6 +1114,14 @@ export class RequirementPanel {
     } else if (msg.command === 'aiDone') {
       const a = msg.artifacts || {};
       if (msg.step === 'review-design') {
+        const selected = msg.selectedArtifacts || ['Architecture Diagram','ADR','OpenAPI Spec','Data Model','Threat Model'];
+        const artifactGroupMap = {
+          'Architecture Diagram': 'group-architectureDiagram',
+          'ADR':                  'group-adr',
+          'OpenAPI Spec':         'group-openApiSpec',
+          'Data Model':           'group-dataModel',
+          'Threat Model':         'group-threatModel',
+        };
         showSection(4);
         markStepDone(3);
         document.getElementById('designSpinner').style.display = 'none';
@@ -1024,6 +1130,9 @@ export class RequirementPanel {
         document.getElementById('ta-openApiSpec').value       = a.openApiSpec || '';
         document.getElementById('ta-dataModel').value         = a.dataModel || '';
         document.getElementById('ta-threatModel').value       = a.threatModel || '';
+        for (const [name, groupId] of Object.entries(artifactGroupMap)) {
+          document.getElementById(groupId).style.display = selected.includes(name) ? '' : 'none';
+        }
       } else {
         document.getElementById('reqSpinner').style.display = 'none';
         document.getElementById('ta-userStories').value         = a.userStories || '';
@@ -1076,6 +1185,10 @@ export class RequirementPanel {
       sec.style.borderLeft = '3px solid var(--vscode-errorForeground)';
       document.getElementById('issueLabel').textContent = 'GitHub Issue — Not Created';
       document.getElementById('issueContent').textContent = msg.text;
+      document.getElementById('createIssueBtn').disabled = false;
+      document.getElementById('backFromStep4Btn').disabled = false;
+
+    } else if (msg.command === 'confirmCancelled') {
       document.getElementById('createIssueBtn').disabled = false;
       document.getElementById('backFromStep4Btn').disabled = false;
     }
