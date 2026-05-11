@@ -1,0 +1,1117 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CodePanel = void 0;
+const cp = __importStar(require("child_process"));
+const https = __importStar(require("https"));
+const vscode = __importStar(require("vscode"));
+const phasePanel_1 = require("./phasePanel");
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getGithubRepoInfo(repoRoot) {
+    try {
+        const remoteUrl = cp
+            .execSync("git remote get-url origin", { cwd: repoRoot, encoding: "utf8", timeout: 5000 })
+            .trim();
+        const httpsMatch = remoteUrl.match(/github\.com[/:]([^/]+)\/([^/.]+?)(?:\.git)?$/);
+        if (httpsMatch) {
+            return { owner: httpsMatch[1], repo: httpsMatch[2] };
+        }
+        const sshMatch = remoteUrl.match(/git@github\.com:([^/]+)\/([^/.]+?)(?:\.git)?$/);
+        if (sshMatch) {
+            return { owner: sshMatch[1], repo: sshMatch[2] };
+        }
+    }
+    catch { /* no remote */ }
+    return null;
+}
+async function getGithubToken() {
+    const session = await vscode.authentication.getSession("github", ["public_repo", "repo"], { createIfNone: true });
+    return session.accessToken;
+}
+function githubRequest(method, path, token, body) {
+    return new Promise((resolve, reject) => {
+        const payload = body ? JSON.stringify(body) : undefined;
+        const req = https.request({
+            hostname: "api.github.com",
+            path,
+            method,
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Accept": "application/vnd.github+json",
+                "Content-Type": "application/json",
+                ...(payload ? { "Content-Length": Buffer.byteLength(payload) } : {}),
+                "User-Agent": "ai-native-devops-vscode",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        }, (res) => {
+            let raw = "";
+            res.on("data", (chunk) => { raw += chunk; });
+            res.on("end", () => {
+                try {
+                    resolve({ status: res.statusCode ?? 0, data: JSON.parse(raw) });
+                }
+                catch {
+                    reject(new Error("Failed to parse GitHub API response"));
+                }
+            });
+        });
+        req.on("error", reject);
+        if (payload) {
+            req.write(payload);
+        }
+        req.end();
+    });
+}
+function buildCodePrompt(issue, branchName, additionalContext) {
+    return [
+        "You are the CODE phase AI agent in an AI-native DevOps workflow.",
+        "",
+        "## Context",
+        `- GitHub Issue: #${issue.number} — ${issue.title}`,
+        `- Feature Branch: ${branchName}`,
+        issue.labels.length > 0 ? `- Labels: ${issue.labels.join(", ")}` : "",
+        "",
+        "## Issue Description",
+        issue.body.trim() || "_No description provided._",
+        "",
+        additionalContext.trim() ? `## Additional Context from Developer\n\n${additionalContext.trim()}\n` : "",
+        "## Task",
+        "Provide actionable coding guidance for this issue. Use exactly these Markdown headings:",
+        "",
+        "## Implementation Plan",
+        "## Key Files",
+        "## Edge Cases",
+        "## Testing Approach",
+        "",
+        "Be concise and production-ready. Do not add text before the first ## heading.",
+    ].filter(Boolean).join("\n");
+}
+function buildPRBody(issue, aiOutput, branchName) {
+    const aiSection = aiOutput.trim()
+        ? `\n## AI Code Assistant Summary\n\n<details>\n<summary>Expand AI guidance</summary>\n\n${aiOutput.trim()}\n\n</details>\n`
+        : "";
+    return [
+        "## Summary",
+        "",
+        `Resolves #${issue.number}`,
+        "",
+        "## Changes",
+        "",
+        `- Implements feature described in issue #${issue.number}: _${issue.title}_`,
+        `- Branch: \`${branchName}\``,
+        "",
+        aiSection,
+        "## Checklist",
+        "",
+        "- [ ] Tests pass",
+        "- [ ] Code reviewed",
+        "- [ ] Docs updated (if applicable)",
+        "",
+        "---",
+        "_Generated by AI-Native DevOps extension — Code Phase_",
+    ].join("\n");
+}
+// ── Panel ─────────────────────────────────────────────────────────────────────
+class CodePanel {
+    constructor(_phase, _context, _aiRunner) {
+        this._phase = _phase;
+        this._context = _context;
+        this._aiRunner = _aiRunner;
+        this._rawOutput = "";
+        this._step = "select-issue";
+        this._cancelled = false;
+        this._workflowCtx = { commandResults: [] };
+        this._repoRoot = "";
+        this._disposables = [];
+        this._panel = vscode.window.createWebviewPanel("codePanel", _phase.label, vscode.ViewColumn.One, { enableScripts: true, retainContextWhenHidden: true });
+        this._repoRoot = (0, phasePanel_1.resolveRepoRoot)(this._context);
+        this._panel.webview.html = this._buildHtml();
+        this._panel.webview.onDidReceiveMessage((msg) => {
+            switch (msg.command) {
+                case "fetchIssues":
+                    this._handleFetchIssues();
+                    break;
+                case "selectIssue":
+                    this._handleSelectIssue({
+                        number: msg.issueNumber,
+                        title: msg.issueTitle,
+                        body: msg.issueBody,
+                        labels: msg.issueLabels ?? [],
+                        createdAt: msg.issueCreatedAt,
+                        htmlUrl: msg.issueHtmlUrl,
+                    });
+                    break;
+                case "createBranch":
+                    this._handleCreateBranch(msg.branchName ?? "");
+                    break;
+                case "continueToAI":
+                    this._step = "ai-assist";
+                    break;
+                case "askAI":
+                    this._handleAskAI(msg.additionalContext ?? "");
+                    break;
+                case "continueToTests":
+                    this._handleContinueToTests();
+                    break;
+                case "runCommand":
+                    this._handleRunCommand(msg.index);
+                    break;
+                case "continueToPR":
+                    this._handleContinueToPR();
+                    break;
+                case "createPR":
+                    this._handleCreatePR(msg.title ?? "", msg.body ?? "", msg.baseBranch ?? "main");
+                    break;
+                case "goBack":
+                    this._handleGoBack(msg.fromStep ?? "");
+                    break;
+                case "restart":
+                    this._handleRestart();
+                    break;
+                case "openUrl":
+                    vscode.env.openExternal(vscode.Uri.parse(msg.url ?? ""));
+                    break;
+            }
+        }, undefined, this._disposables);
+        this._panel.onDidDispose(() => this._dispose(), undefined, this._disposables);
+    }
+    static show(phase, context, aiRunner) {
+        if (CodePanel._current) {
+            CodePanel._current._panel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+        CodePanel._current = new CodePanel(phase, context, aiRunner);
+    }
+    // ── Step handlers ──────────────────────────────────────────────────────────
+    async _handleFetchIssues() {
+        this._panel.webview.postMessage({ command: "issuesLoading" });
+        try {
+            const token = await getGithubToken();
+            const repoInfo = getGithubRepoInfo(this._repoRoot);
+            if (!repoInfo) {
+                const cfg = vscode.workspace.getConfiguration("aiNativeDevOps");
+                const owner = cfg.get("githubOwner", "");
+                const repo = cfg.get("githubRepo", "");
+                if (!owner || !repo) {
+                    this._panel.webview.postMessage({
+                        command: "issuesError",
+                        text: "Could not detect GitHub repo. Set aiNativeDevOps.githubOwner and githubRepo in settings.",
+                    });
+                    return;
+                }
+                await this._fetchAndSendIssues(token, owner, repo);
+            }
+            else {
+                await this._fetchAndSendIssues(token, repoInfo.owner, repoInfo.repo);
+            }
+        }
+        catch (err) {
+            this._panel.webview.postMessage({
+                command: "issuesError",
+                text: err instanceof Error ? err.message : String(err),
+            });
+        }
+    }
+    async _fetchAndSendIssues(token, owner, repo) {
+        const result = await githubRequest("GET", `/repos/${owner}/${repo}/issues?state=open&per_page=50`, token);
+        if (!Array.isArray(result.data)) {
+            const err = result.data.message ?? `HTTP ${result.status}`;
+            this._panel.webview.postMessage({ command: "issuesError", text: err });
+            return;
+        }
+        const issues = result.data
+            .filter((i) => !i.pull_request)
+            .map((i) => ({
+            number: i.number,
+            title: i.title,
+            body: i.body ?? "",
+            labels: i.labels.map((l) => l.name),
+            createdAt: i.created_at,
+            htmlUrl: i.html_url,
+        }));
+        this._panel.webview.postMessage({ command: "issuesLoaded", issues });
+    }
+    _handleSelectIssue(issue) {
+        this._workflowCtx.selectedIssue = issue;
+        this._step = "create-branch";
+        const slug = issue.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "")
+            .slice(0, 40);
+        const branchName = `feature/issue-${issue.number}-${slug}`;
+        this._panel.webview.postMessage({ command: "issueSelected", branchName, issue });
+    }
+    _handleCreateBranch(branchName) {
+        if (!/^[a-zA-Z0-9/_-]{1,60}$/.test(branchName)) {
+            this._panel.webview.postMessage({
+                command: "branchError",
+                text: "Branch name may only contain letters, digits, /, _, and -.",
+            });
+            return;
+        }
+        this._panel.webview.postMessage({ command: "branchCreating" });
+        cp.exec(`git checkout -b ${branchName}`, { cwd: this._repoRoot, timeout: 15000 }, (err, _stdout, stderr) => {
+            if (!err) {
+                this._workflowCtx.branchName = branchName;
+                this._panel.webview.postMessage({ command: "branchCreated", branchName });
+                return;
+            }
+            // branch may already exist — try switching to it
+            cp.exec(`git checkout ${branchName}`, { cwd: this._repoRoot, timeout: 10000 }, (err2, _out2, stderr2) => {
+                if (!err2) {
+                    this._workflowCtx.branchName = branchName;
+                    this._panel.webview.postMessage({
+                        command: "branchCreated",
+                        branchName,
+                        note: "Switched to existing branch.",
+                    });
+                }
+                else {
+                    this._panel.webview.postMessage({
+                        command: "branchError",
+                        text: stderr2.trim() || stderr.trim() || err.message,
+                    });
+                }
+            });
+        });
+    }
+    async _handleAskAI(additionalContext) {
+        const issue = this._workflowCtx.selectedIssue;
+        const branch = this._workflowCtx.branchName;
+        if (!issue || !branch) {
+            return;
+        }
+        this._cancelled = true;
+        this._rawOutput = "";
+        setImmediate(() => { this._cancelled = false; });
+        this._panel.webview.postMessage({ command: "started", step: "ai-assist" });
+        const prompt = buildCodePrompt(issue, branch, additionalContext);
+        const sink = {
+            appendAiChunk: (chunk) => {
+                if (this._cancelled) {
+                    return;
+                }
+                this._rawOutput += chunk;
+                this._panel.webview.postMessage({ command: "appendChunk", text: chunk });
+            },
+            aiDone: () => {
+                if (this._cancelled) {
+                    return;
+                }
+                this._workflowCtx.aiOutput = this._rawOutput;
+                this._panel.webview.postMessage({ command: "aiDone", output: this._rawOutput });
+            },
+            aiError: (msg) => {
+                if (this._cancelled) {
+                    return;
+                }
+                this._panel.webview.postMessage({ command: "aiError", text: msg });
+            },
+        };
+        await this._aiRunner.run(this._phase, prompt, sink);
+    }
+    _handleContinueToTests() {
+        this._step = "run-tests";
+        const approvedCommands = vscode.workspace
+            .getConfiguration("aiNativeDevOps")
+            .get("approvedCommands", ["npm test", "npm run lint", "npm run build"]);
+        this._workflowCtx.commandResults = approvedCommands.map((_, i) => ({
+            index: i, status: "pending", output: "",
+        }));
+        this._panel.webview.postMessage({ command: "commandsLoaded", commands: approvedCommands });
+    }
+    _handleContinueToPR() {
+        this._step = "create-pr";
+        const issue = this._workflowCtx.selectedIssue;
+        const branch = this._workflowCtx.branchName ?? "";
+        if (!issue) {
+            return;
+        }
+        const prTitle = `feat: resolve #${issue.number} ${issue.title}`;
+        const prBody = buildPRBody(issue, this._workflowCtx.aiOutput ?? "", branch);
+        this._panel.webview.postMessage({ command: "prPrefill", prTitle, prBody });
+    }
+    _handleRunCommand(index) {
+        const approvedCommands = vscode.workspace
+            .getConfiguration("aiNativeDevOps")
+            .get("approvedCommands", ["npm test", "npm run lint", "npm run build"]);
+        const cmd = approvedCommands[index];
+        if (!cmd) {
+            return;
+        }
+        const result = this._workflowCtx.commandResults[index];
+        if (result) {
+            result.status = "running";
+            result.output = "";
+        }
+        this._panel.webview.postMessage({ command: "commandStarted", index });
+        const child = cp.spawn(cmd, [], {
+            cwd: this._repoRoot,
+            shell: true,
+        });
+        const onData = (chunk) => {
+            const text = chunk.toString();
+            if (result) {
+                result.output += text;
+            }
+            this._panel.webview.postMessage({ command: "commandOutput", index, text });
+        };
+        child.stdout.on("data", onData);
+        child.stderr.on("data", onData);
+        child.on("close", (code) => {
+            const exitCode = code ?? 1;
+            if (result) {
+                result.status = exitCode === 0 ? "pass" : "fail";
+            }
+            this._panel.webview.postMessage({ command: "commandDone", index, exitCode });
+        });
+        child.on("error", (err) => {
+            if (result) {
+                result.status = "fail";
+            }
+            this._panel.webview.postMessage({ command: "commandOutput", index, text: `Error: ${err.message}\n` });
+            this._panel.webview.postMessage({ command: "commandDone", index, exitCode: 1 });
+        });
+    }
+    async _handleCreatePR(title, body, baseBranch) {
+        if (!title.trim()) {
+            this._panel.webview.postMessage({ command: "prError", text: "PR title is required." });
+            return;
+        }
+        this._panel.webview.postMessage({ command: "prCreating" });
+        try {
+            const token = await getGithubToken();
+            const repoInfo = getGithubRepoInfo(this._repoRoot);
+            const cfg = vscode.workspace.getConfiguration("aiNativeDevOps");
+            const owner = repoInfo?.owner ?? cfg.get("githubOwner", "");
+            const repo = repoInfo?.repo ?? cfg.get("githubRepo", "");
+            if (!owner || !repo) {
+                this._panel.webview.postMessage({
+                    command: "prError",
+                    text: "Could not detect GitHub repo. Set aiNativeDevOps.githubOwner and githubRepo in settings.",
+                });
+                return;
+            }
+            const branchName = this._workflowCtx.branchName ?? "";
+            const prResult = await githubRequest("POST", `/repos/${owner}/${repo}/pulls`, token, { title: title.trim(), body, head: branchName, base: baseBranch, draft: false });
+            if (prResult.status === 422) {
+                this._panel.webview.postMessage({
+                    command: "prError",
+                    text: "GitHub rejected the PR. Make sure you've pushed your branch: git push -u origin " + branchName,
+                });
+                return;
+            }
+            if (!prResult.data.html_url || !prResult.data.number) {
+                this._panel.webview.postMessage({
+                    command: "prError",
+                    text: prResult.data.message ?? `GitHub API returned ${prResult.status}`,
+                });
+                return;
+            }
+            const prUrl = prResult.data.html_url;
+            const prNumber = prResult.data.number;
+            const issue = this._workflowCtx.selectedIssue;
+            this._workflowCtx.prUrl = prUrl;
+            this._workflowCtx.prNumber = prNumber;
+            this._step = "complete";
+            this._panel.webview.postMessage({
+                command: "prCreated",
+                prUrl,
+                prNumber,
+                issueUrl: issue.htmlUrl,
+                issueNumber: issue.number,
+            });
+            // fire-and-forget comments
+            const issueComment = `A pull request has been opened to resolve this issue: ${prUrl}\n\nBranch: \`${branchName}\`\n\n_Posted by AI-Native DevOps extension_`;
+            const prComment = this._workflowCtx.aiOutput?.trim()
+                ? `## AI Code Assistance Summary\n\n${this._workflowCtx.aiOutput.slice(0, 1000)}${this._workflowCtx.aiOutput.length > 1000 ? "\n\n_…(truncated)_" : ""}\n\n_Posted by AI-Native DevOps extension_`
+                : `_Implementation completed via AI-Native DevOps extension — Code Phase._`;
+            githubRequest("POST", `/repos/${owner}/${repo}/issues/${issue.number}/comments`, token, { body: issueComment })
+                .catch((e) => vscode.window.showWarningMessage(`Could not comment on issue: ${e.message}`));
+            githubRequest("POST", `/repos/${owner}/${repo}/issues/${prNumber}/comments`, token, { body: prComment })
+                .catch((e) => vscode.window.showWarningMessage(`Could not comment on PR: ${e.message}`));
+        }
+        catch (err) {
+            this._panel.webview.postMessage({
+                command: "prError",
+                text: err instanceof Error ? err.message : String(err),
+            });
+        }
+    }
+    _handleGoBack(fromStep) {
+        this._cancelled = true;
+        this._rawOutput = "";
+        const prev = {
+            "create-branch": "select-issue",
+            "ai-assist": "create-branch",
+            "run-tests": "ai-assist",
+            "create-pr": "run-tests",
+        };
+        this._step = prev[fromStep] ?? "select-issue";
+        setImmediate(() => { this._cancelled = false; });
+    }
+    _handleRestart() {
+        this._cancelled = true;
+        this._rawOutput = "";
+        this._workflowCtx = { commandResults: [] };
+        this._step = "select-issue";
+        setImmediate(() => { this._cancelled = false; });
+    }
+    _dispose() {
+        CodePanel._current = undefined;
+        for (const d of this._disposables) {
+            d.dispose();
+        }
+        this._disposables = [];
+    }
+    // ── HTML ───────────────────────────────────────────────────────────────────
+    _buildHtml() {
+        return /* html */ `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<title>${this._phase.label}</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+    padding: 24px;
+    max-width: 820px;
+  }
+  h1 { font-size: 1.4em; margin-bottom: 4px; }
+  .subtitle { color: var(--vscode-descriptionForeground); margin-bottom: 20px; font-size: 0.9em; }
+  h2 { font-size: 1.05em; margin-bottom: 10px; }
+  .field { margin-bottom: 14px; }
+  label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.9em; }
+  input[type="text"], textarea {
+    width: 100%;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border, #555);
+    border-radius: 3px;
+    padding: 7px 10px;
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+  }
+  input[type="text"]:focus, textarea:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    border-color: var(--vscode-focusBorder);
+  }
+  textarea { min-height: 100px; resize: vertical; }
+  .error-msg { color: var(--vscode-errorForeground); font-size: 0.85em; margin-top: 6px; min-height: 1em; }
+  button.primary {
+    padding: 8px 20px;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none; border-radius: 3px; cursor: pointer;
+    font-size: 0.95em; margin-top: 4px;
+  }
+  button.primary:hover { background: var(--vscode-button-hoverBackground); }
+  button.primary:disabled { opacity: 0.5; cursor: default; }
+  button.secondary {
+    padding: 8px 16px;
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none; border-radius: 3px; cursor: pointer;
+    font-size: 0.95em; margin-top: 4px;
+  }
+  button.secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
+  button.secondary:disabled { opacity: 0.5; cursor: default; }
+  .button-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .divider { border: none; border-top: 1px solid var(--vscode-panel-border, #444); margin: 20px 0; }
+  /* Step indicator */
+  .step-indicator {
+    display: flex; align-items: center;
+    padding: 14px 0 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--vscode-panel-border, #444);
+    overflow-x: auto;
+  }
+  .step-dot {
+    display: flex; flex-direction: column; align-items: center;
+    opacity: 0.35; min-width: 66px; transition: opacity 0.2s;
+  }
+  .step-dot.active { opacity: 1; }
+  .step-dot.done { opacity: 0.7; }
+  .step-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8em; font-weight: 700; margin-bottom: 5px;
+  }
+  .step-dot.active .step-num { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+  .step-dot.done .step-num { background: #4caf50; color: #fff; }
+  .step-lbl { font-size: 0.68em; color: var(--vscode-descriptionForeground); text-align: center; }
+  .step-connector { flex: 1; height: 1px; background: var(--vscode-panel-border, #444); margin: 0 2px 26px; min-width: 10px; }
+  /* Spinner */
+  .spinner-row {
+    display: flex; align-items: center; gap: 8px;
+    font-style: italic; color: var(--vscode-descriptionForeground);
+    margin-bottom: 8px; font-size: 0.9em;
+  }
+  .spinner {
+    display: inline-block; width: 13px; height: 13px;
+    border: 2px solid var(--vscode-foreground);
+    border-top-color: transparent; border-radius: 50%;
+    animation: spin 0.7s linear infinite; opacity: 0.55; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* Output pre */
+  .output-pre {
+    white-space: pre-wrap; word-break: break-word;
+    background: var(--vscode-textBlockQuote-background, #1e1e1e);
+    border-left: 3px solid var(--vscode-textBlockQuote-border, #555);
+    padding: 12px; max-height: 300px; overflow-y: auto;
+    font-size: 0.85em; margin-bottom: 14px;
+    font-family: var(--vscode-editor-font-family, monospace);
+  }
+  /* Issue cards (Step 1) */
+  .search-box { margin-bottom: 12px; }
+  .issue-card {
+    border: 1px solid var(--vscode-panel-border, #444);
+    border-radius: 4px; padding: 10px 12px; margin-bottom: 8px;
+  }
+  .issue-card-header { display: flex; align-items: baseline; gap: 8px; }
+  .issue-card-number { color: var(--vscode-descriptionForeground); font-size: 0.83em; white-space: nowrap; }
+  .issue-card-title { font-weight: 600; flex: 1; }
+  .issue-card-labels { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+  .issue-label-chip {
+    font-size: 0.72em; padding: 2px 6px; border-radius: 10px;
+    background: var(--vscode-badge-background); color: var(--vscode-badge-foreground);
+  }
+  .issue-card-body-preview {
+    font-size: 0.82em; margin-top: 5px;
+    color: var(--vscode-descriptionForeground);
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .issue-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+  .issue-card-date { font-size: 0.75em; color: var(--vscode-descriptionForeground); }
+  /* Branch step */
+  .branch-status { margin-top: 8px; font-size: 0.88em; }
+  .branch-ok { color: #4caf50; }
+  /* Command cards (Step 4) */
+  .cmd-card {
+    border: 1px solid var(--vscode-panel-border, #444);
+    border-radius: 4px; padding: 10px 12px; margin-bottom: 8px;
+  }
+  .cmd-header { display: flex; align-items: center; gap: 8px; }
+  .cmd-text {
+    flex: 1; font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 0.88em; background: var(--vscode-textBlockQuote-background);
+    padding: 2px 6px; border-radius: 2px; word-break: break-all;
+  }
+  .cmd-status-badge {
+    font-size: 0.75em; padding: 2px 8px; border-radius: 10px; font-weight: 700; white-space: nowrap;
+  }
+  .badge-pending  { background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+  .badge-running  { background: #1976d2; color: #fff; }
+  .badge-pass     { background: #4caf50; color: #fff; }
+  .badge-fail     { background: var(--vscode-errorForeground, #f44336); color: #fff; }
+  .cmd-output-area {
+    display: none; margin-top: 8px; max-height: 180px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-word;
+    background: var(--vscode-textBlockQuote-background); padding: 8px;
+    font-size: 0.82em; font-family: var(--vscode-editor-font-family, monospace);
+  }
+  /* PR result */
+  .result-box {
+    margin-top: 14px; padding: 12px;
+    background: var(--vscode-textBlockQuote-background);
+    border-left: 3px solid #4caf50; border-radius: 3px;
+  }
+  .result-box a { color: var(--vscode-textLink-foreground); cursor: pointer; text-decoration: underline; }
+  .info-block {
+    background: var(--vscode-textBlockQuote-background);
+    border-left: 3px solid var(--vscode-textBlockQuote-border, #555);
+    padding: 8px 12px; margin-bottom: 12px; font-size: 0.88em;
+    color: var(--vscode-descriptionForeground);
+  }
+  section { display: none; }
+  section.active { display: block; }
+</style>
+</head>
+<body>
+<h1>${this._phase.label}</h1>
+<p class="subtitle">Select a GitHub issue, branch, get AI guidance, run tests, and open a PR.</p>
+
+<!-- Step indicator -->
+<div class="step-indicator">
+  <div class="step-dot active" id="step-dot-1">
+    <div class="step-num" id="step-num-1">1</div>
+    <div class="step-lbl">Select Issue</div>
+  </div>
+  <div class="step-connector"></div>
+  <div class="step-dot" id="step-dot-2">
+    <div class="step-num" id="step-num-2">2</div>
+    <div class="step-lbl">Branch</div>
+  </div>
+  <div class="step-connector"></div>
+  <div class="step-dot" id="step-dot-3">
+    <div class="step-num" id="step-num-3">3</div>
+    <div class="step-lbl">AI Assist</div>
+  </div>
+  <div class="step-connector"></div>
+  <div class="step-dot" id="step-dot-4">
+    <div class="step-num" id="step-num-4">4</div>
+    <div class="step-lbl">Tests</div>
+  </div>
+  <div class="step-connector"></div>
+  <div class="step-dot" id="step-dot-5">
+    <div class="step-num" id="step-num-5">5</div>
+    <div class="step-lbl">Create PR</div>
+  </div>
+</div>
+
+<!-- Step 1: Select Issue -->
+<section id="sectionStep1" class="active">
+  <h2>Fetch open GitHub issues</h2>
+  <div class="search-box">
+    <input type="text" id="issueSearchBox" placeholder="Filter issues..." oninput="filterIssues()" style="display:none;">
+  </div>
+  <div id="issueSpinner" class="spinner-row" style="display:none;"><div class="spinner"></div> Loading issues…</div>
+  <div id="issueError" class="error-msg"></div>
+  <div id="issueList"></div>
+  <div class="button-row">
+    <button class="primary" id="fetchIssuesBtn" onclick="fetchIssues()">Fetch Issues</button>
+  </div>
+</section>
+
+<!-- Step 2: Create Branch -->
+<section id="sectionStep2">
+  <div class="info-block" id="selectedIssueSummary"></div>
+  <div class="field">
+    <label for="branchNameInput">Branch Name</label>
+    <input type="text" id="branchNameInput" placeholder="feature/issue-123-my-feature" maxlength="60">
+  </div>
+  <div class="branch-status" id="branchStatusMsg"></div>
+  <div class="button-row">
+    <button class="primary" id="createBranchBtn" onclick="createBranch()">Create Branch</button>
+    <button class="primary" id="continueToAIBtn" style="display:none;" onclick="continueToAI()">Continue to AI Assist</button>
+    <button class="secondary" onclick="goBack('create-branch')">Back</button>
+  </div>
+</section>
+
+<!-- Step 3: AI Code Assist -->
+<section id="sectionStep3">
+  <div class="info-block" id="issueDisplayHeader"></div>
+  <div class="field">
+    <label>Issue Description</label>
+    <div class="output-pre" id="issueDisplayBody" style="max-height:150px;"></div>
+  </div>
+  <div class="field">
+    <label for="additionalContextInput">Additional Context (optional)</label>
+    <textarea id="additionalContextInput" placeholder="Any extra context, constraints, or refinements for the AI…"></textarea>
+  </div>
+  <div id="aiSpinner" class="spinner-row" style="display:none;"><div class="spinner"></div> AI is thinking…</div>
+  <div id="aiOutputPre" class="output-pre" style="display:none;"></div>
+  <div class="button-row">
+    <button class="primary" id="askAIBtn" onclick="askAI()">Ask AI</button>
+    <button class="primary" id="continueToTestsBtn" style="display:none;" onclick="continueToTests()">Continue to Tests</button>
+    <button class="secondary" id="copyAIBtn" style="display:none;" onclick="copyAI()">Copy AI Output</button>
+    <button class="secondary" onclick="goBack('ai-assist')">Back</button>
+  </div>
+</section>
+
+<!-- Step 4: Run Approved Commands -->
+<section id="sectionStep4">
+  <h2>Run approved commands</h2>
+  <p class="subtitle" style="margin-bottom:14px;">Click Run on each command. You decide when to proceed.</p>
+  <div id="commandList"></div>
+  <div class="button-row">
+    <button class="primary" onclick="continueToPR()">All Done — Create PR</button>
+    <button class="secondary" onclick="goBack('run-tests')">Back</button>
+  </div>
+</section>
+
+<!-- Step 5: Create PR -->
+<section id="sectionStep5">
+  <h2>Open a pull request</h2>
+  <div class="field">
+    <label for="prTitleInput">PR Title</label>
+    <input type="text" id="prTitleInput" placeholder="feat: resolve #123 My Feature">
+  </div>
+  <div class="field">
+    <label for="prBaseBranchInput">Base Branch</label>
+    <input type="text" id="prBaseBranchInput" value="main">
+  </div>
+  <div class="field">
+    <label for="prBodyTextarea">PR Body</label>
+    <textarea id="prBodyTextarea" style="min-height:180px;font-family:var(--vscode-editor-font-family,monospace);font-size:0.88em;"></textarea>
+  </div>
+  <div class="error-msg" id="prErrorMsg"></div>
+  <div id="prSpinner" class="spinner-row" style="display:none;"><div class="spinner"></div> Creating PR…</div>
+  <div id="prResultSection" style="display:none;">
+    <div class="result-box">
+      <strong>PR created!</strong><br>
+      <a id="prResultLink" onclick="openUrl(event)"></a><br>
+      <a id="issueResultLink" style="margin-top:4px;display:inline-block;" onclick="openUrl(event)"></a>
+    </div>
+  </div>
+  <div class="button-row">
+    <button class="primary" id="createPRBtn" onclick="createPR()">Create PR</button>
+    <button class="secondary" onclick="goBack('create-pr')">Back</button>
+  </div>
+</section>
+
+<script>
+const vscode = acquireVsCodeApi();
+let allIssues = [];
+let aiOutputText = '';
+
+// ── Step navigation ──────────────────────────────────────────────────────────
+function showSection(n) {
+  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('sectionStep' + n);
+  if (el) { el.classList.add('active'); }
+}
+function markDone(n) {
+  const dot = document.getElementById('step-dot-' + n);
+  if (!dot) { return; }
+  dot.classList.remove('active'); dot.classList.add('done');
+  const num = document.getElementById('step-num-' + n);
+  if (num) { num.textContent = '✓'; }
+}
+function markActive(n) {
+  const dot = document.getElementById('step-dot-' + n);
+  if (!dot) { return; }
+  dot.classList.remove('done'); dot.classList.add('active');
+}
+function unmarkDone(n) {
+  const dot = document.getElementById('step-dot-' + n);
+  if (!dot) { return; }
+  dot.classList.remove('done', 'active');
+  const num = document.getElementById('step-num-' + n);
+  if (num) { num.textContent = String(n); }
+}
+
+// ── Step 1 ───────────────────────────────────────────────────────────────────
+function fetchIssues() {
+  document.getElementById('fetchIssuesBtn').disabled = true;
+  document.getElementById('issueError').textContent = '';
+  document.getElementById('issueSpinner').style.display = 'flex';
+  document.getElementById('issueList').innerHTML = '';
+  document.getElementById('issueSearchBox').style.display = 'none';
+  vscode.postMessage({ command: 'fetchIssues' });
+}
+
+function renderIssues(issues) {
+  allIssues = issues;
+  const list = document.getElementById('issueList');
+  if (!issues.length) {
+    list.innerHTML = '<p style="color:var(--vscode-descriptionForeground);font-size:0.9em;">No open issues found.</p>';
+    return;
+  }
+  document.getElementById('issueSearchBox').style.display = 'block';
+  renderFiltered(issues);
+}
+
+function renderFiltered(issues) {
+  const list = document.getElementById('issueList');
+  list.innerHTML = '';
+  issues.forEach(issue => {
+    const labels = (issue.labels || []).map(l => '<span class="issue-label-chip">' + escHtml(l) + '</span>').join('');
+    const preview = (issue.body || '').replace(/[#*_>\[\]]/g, '').slice(0, 150);
+    const date = issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : '';
+    const card = document.createElement('div');
+    card.className = 'issue-card';
+    card.innerHTML = \`
+      <div class="issue-card-header">
+        <span class="issue-card-number">#\${issue.number}</span>
+        <span class="issue-card-title">\${escHtml(issue.title)}</span>
+      </div>
+      \${labels ? '<div class="issue-card-labels">' + labels + '</div>' : ''}
+      \${preview ? '<div class="issue-card-body-preview">' + escHtml(preview) + '</div>' : ''}
+      <div class="issue-card-footer">
+        <span class="issue-card-date">\${date}</span>
+        <button class="primary" style="margin-top:0;padding:5px 14px;" onclick="selectIssue(\${issue.number})">Select</button>
+      </div>
+    \`;
+    list.appendChild(card);
+  });
+}
+
+function filterIssues() {
+  const q = document.getElementById('issueSearchBox').value.toLowerCase();
+  if (!q) { renderFiltered(allIssues); return; }
+  renderFiltered(allIssues.filter(i =>
+    i.title.toLowerCase().includes(q) ||
+    String(i.number).includes(q) ||
+    (i.labels || []).some(l => l.toLowerCase().includes(q))
+  ));
+}
+
+function selectIssue(number) {
+  const issue = allIssues.find(i => i.number === number);
+  if (!issue) { return; }
+  vscode.postMessage({
+    command: 'selectIssue',
+    issueNumber: issue.number,
+    issueTitle: issue.title,
+    issueBody: issue.body || '',
+    issueLabels: issue.labels || [],
+    issueCreatedAt: issue.createdAt,
+    issueHtmlUrl: issue.htmlUrl,
+  });
+}
+
+// ── Step 2 ───────────────────────────────────────────────────────────────────
+function createBranch() {
+  const name = document.getElementById('branchNameInput').value.trim();
+  if (!name) { document.getElementById('branchStatusMsg').textContent = 'Branch name is required.'; return; }
+  document.getElementById('createBranchBtn').disabled = true;
+  document.getElementById('branchStatusMsg').textContent = 'Creating branch…';
+  document.getElementById('branchStatusMsg').className = 'branch-status';
+  vscode.postMessage({ command: 'createBranch', branchName: name });
+}
+function continueToAI() {
+  markDone(2); markActive(3); showSection(3);
+  vscode.postMessage({ command: 'continueToAI' });
+}
+
+// ── Step 3 ───────────────────────────────────────────────────────────────────
+function askAI() {
+  const ctx = document.getElementById('additionalContextInput').value;
+  document.getElementById('askAIBtn').disabled = true;
+  document.getElementById('aiOutputPre').style.display = 'none';
+  document.getElementById('aiOutputPre').textContent = '';
+  document.getElementById('aiSpinner').style.display = 'flex';
+  document.getElementById('continueToTestsBtn').style.display = 'none';
+  document.getElementById('copyAIBtn').style.display = 'none';
+  aiOutputText = '';
+  vscode.postMessage({ command: 'askAI', additionalContext: ctx });
+}
+function copyAI() {
+  navigator.clipboard.writeText(aiOutputText).catch(() => {});
+}
+function continueToTests() {
+  markDone(3); markActive(4); showSection(4);
+  vscode.postMessage({ command: 'continueToTests' });
+}
+
+// ── Step 4 ───────────────────────────────────────────────────────────────────
+function buildCommandCards(commands) {
+  const list = document.getElementById('commandList');
+  list.innerHTML = '';
+  commands.forEach((cmd, i) => {
+    const card = document.createElement('div');
+    card.className = 'cmd-card';
+    card.dataset.index = i;
+    card.innerHTML = \`
+      <div class="cmd-header">
+        <span class="cmd-text">\${escHtml(cmd)}</span>
+        <span class="cmd-status-badge badge-pending" id="cmd-badge-\${i}">pending</span>
+        <button class="secondary" style="margin-top:0;padding:4px 12px;" id="cmd-run-\${i}" onclick="runCmd(\${i})">Run</button>
+      </div>
+      <div class="cmd-output-area" id="cmd-out-\${i}"></div>
+    \`;
+    list.appendChild(card);
+  });
+}
+function runCmd(index) {
+  document.getElementById('cmd-run-' + index).disabled = true;
+  vscode.postMessage({ command: 'runCommand', index });
+}
+function continueToPR() {
+  markDone(4); markActive(5); showSection(5);
+  vscode.postMessage({ command: 'continueToPR' });
+}
+
+// ── Step 5 ───────────────────────────────────────────────────────────────────
+function createPR() {
+  const title = document.getElementById('prTitleInput').value;
+  const body = document.getElementById('prBodyTextarea').value;
+  const base = document.getElementById('prBaseBranchInput').value || 'main';
+  document.getElementById('prErrorMsg').textContent = '';
+  document.getElementById('createPRBtn').disabled = true;
+  document.getElementById('prSpinner').style.display = 'flex';
+  vscode.postMessage({ command: 'createPR', title, body, baseBranch: base });
+}
+function openUrl(evt) {
+  evt.preventDefault();
+  const url = evt.currentTarget.href || evt.currentTarget.dataset.url;
+  if (url) { vscode.postMessage({ command: 'openUrl', url }); }
+}
+
+// ── Back / restart ───────────────────────────────────────────────────────────
+function goBack(fromStep) {
+  const stepMap = { 'create-branch': [1, 2], 'ai-assist': [2, 3], 'run-tests': [3, 4], 'create-pr': [4, 5] };
+  const [prevStep, curStep] = stepMap[fromStep] || [1, 2];
+  unmarkDone(prevStep); markActive(prevStep); showSection(prevStep);
+  // re-enable any disabled buttons in current step
+  document.querySelectorAll('#sectionStep' + curStep + ' button').forEach(b => { b.disabled = false; });
+  vscode.postMessage({ command: 'goBack', fromStep });
+}
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Message handler ──────────────────────────────────────────────────────────
+window.addEventListener('message', ev => {
+  const msg = ev.data;
+  switch (msg.command) {
+    case 'issuesLoading':
+      document.getElementById('issueSpinner').style.display = 'flex';
+      break;
+    case 'issuesLoaded':
+      document.getElementById('issueSpinner').style.display = 'none';
+      document.getElementById('fetchIssuesBtn').disabled = false;
+      renderIssues(msg.issues || []);
+      break;
+    case 'issuesError':
+      document.getElementById('issueSpinner').style.display = 'none';
+      document.getElementById('fetchIssuesBtn').disabled = false;
+      document.getElementById('issueError').textContent = msg.text || 'Unknown error';
+      break;
+    case 'issueSelected': {
+      markDone(1); markActive(2); showSection(2);
+      const issue = msg.issue;
+      if (issue) {
+        document.getElementById('selectedIssueSummary').textContent = '#' + issue.number + ' — ' + issue.title;
+        document.getElementById('issueDisplayHeader').textContent = '#' + issue.number + ' — ' + issue.title;
+        document.getElementById('issueDisplayBody').textContent = issue.body || '(no description)';
+      }
+      document.getElementById('branchNameInput').value = msg.branchName || '';
+      document.getElementById('branchStatusMsg').textContent = '';
+      document.getElementById('continueToAIBtn').style.display = 'none';
+      break;
+    }
+    case 'branchCreating':
+      break;
+    case 'branchCreated':
+      document.getElementById('createBranchBtn').disabled = false;
+      document.getElementById('branchStatusMsg').className = 'branch-status branch-ok';
+      document.getElementById('branchStatusMsg').textContent = (msg.note || 'Branch created: ') + (msg.note ? '' : msg.branchName);
+      document.getElementById('continueToAIBtn').style.display = 'inline-block';
+      break;
+    case 'branchError':
+      document.getElementById('createBranchBtn').disabled = false;
+      document.getElementById('branchStatusMsg').className = 'branch-status error-msg';
+      document.getElementById('branchStatusMsg').textContent = msg.text || 'Failed to create branch.';
+      break;
+    case 'started':
+      document.getElementById('aiSpinner').style.display = 'flex';
+      document.getElementById('aiOutputPre').style.display = 'block';
+      document.getElementById('aiOutputPre').textContent = '';
+      aiOutputText = '';
+      break;
+    case 'appendChunk':
+      aiOutputText += msg.text || '';
+      const pre = document.getElementById('aiOutputPre');
+      pre.textContent = aiOutputText;
+      pre.scrollTop = pre.scrollHeight;
+      break;
+    case 'aiDone':
+      document.getElementById('aiSpinner').style.display = 'none';
+      document.getElementById('askAIBtn').disabled = false;
+      document.getElementById('continueToTestsBtn').style.display = 'inline-block';
+      document.getElementById('copyAIBtn').style.display = 'inline-block';
+      aiOutputText = msg.output || aiOutputText;
+      break;
+    case 'aiError':
+      document.getElementById('aiSpinner').style.display = 'none';
+      document.getElementById('askAIBtn').disabled = false;
+      document.getElementById('aiOutputPre').style.display = 'block';
+      document.getElementById('aiOutputPre').textContent = 'Error: ' + (msg.text || 'Unknown error');
+      break;
+    case 'commandsLoaded':
+      buildCommandCards(msg.commands || []);
+      break;
+    case 'commandStarted': {
+      const badge = document.getElementById('cmd-badge-' + msg.index);
+      if (badge) { badge.className = 'cmd-status-badge badge-running'; badge.textContent = 'running'; }
+      const out = document.getElementById('cmd-out-' + msg.index);
+      if (out) { out.style.display = 'block'; out.textContent = ''; }
+      break;
+    }
+    case 'commandOutput': {
+      const out = document.getElementById('cmd-out-' + msg.index);
+      if (out) { out.textContent += msg.text || ''; out.scrollTop = out.scrollHeight; }
+      break;
+    }
+    case 'commandDone': {
+      const pass = (msg.exitCode === 0);
+      const badge = document.getElementById('cmd-badge-' + msg.index);
+      if (badge) {
+        badge.className = 'cmd-status-badge ' + (pass ? 'badge-pass' : 'badge-fail');
+        badge.textContent = pass ? 'pass' : 'fail';
+      }
+      const runBtn = document.getElementById('cmd-run-' + msg.index);
+      if (runBtn) { runBtn.disabled = false; }
+      break;
+    }
+    case 'prCreating':
+      document.getElementById('prSpinner').style.display = 'flex';
+      break;
+    case 'prCreated':
+      document.getElementById('prSpinner').style.display = 'none';
+      markDone(5);
+      document.getElementById('createPRBtn').disabled = false;
+      document.getElementById('prResultSection').style.display = 'block';
+      const prLink = document.getElementById('prResultLink');
+      prLink.textContent = 'View PR #' + msg.prNumber;
+      prLink.dataset.url = msg.prUrl;
+      prLink.href = msg.prUrl;
+      const issueLink = document.getElementById('issueResultLink');
+      issueLink.textContent = 'View Issue #' + msg.issueNumber;
+      issueLink.dataset.url = msg.issueUrl;
+      issueLink.href = msg.issueUrl;
+      break;
+    case 'prPrefill':
+      document.getElementById('prTitleInput').value = msg.prTitle || '';
+      document.getElementById('prBodyTextarea').value = msg.prBody || '';
+      break;
+    case 'prError':
+      document.getElementById('prSpinner').style.display = 'none';
+      document.getElementById('createPRBtn').disabled = false;
+      document.getElementById('prErrorMsg').textContent = msg.text || 'Failed to create PR.';
+      break;
+  }
+});
+</script>
+</body>
+</html>`;
+    }
+}
+exports.CodePanel = CodePanel;
+//# sourceMappingURL=codePanel.js.map
