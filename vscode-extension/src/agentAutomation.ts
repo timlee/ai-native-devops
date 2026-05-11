@@ -89,34 +89,6 @@ export const AGENT_AUTOMATION_SPECS: AgentAutomationSpec[] = [
     ],
   },
   {
-    phaseId: 2,
-    phaseKey: "design",
-    agentName: "DESIGN agent",
-    objective: "Translate approved planning artifacts into architecture options, ADR, API contract, and threat model.",
-    triggers: [
-      { id: "ready_for_design", label: "Issue labeled ready-for-design", description: "Design gate opened" },
-    ],
-    automatedFlow: [
-      "Generate architecture options with trade-offs",
-      "Draft API contract and data model",
-      "Produce ADR proposal",
-      "Produce threat model assumptions and mitigations",
-      "Map implementation boundaries in current repository",
-    ],
-    outputs: [
-      "Architecture options",
-      "ADR",
-      "API contract",
-      "Threat model",
-    ],
-    artifactPaths: [
-      "docs/architecture/design-draft.md",
-      "docs/adr/ADR-0001-design-decision.md",
-      "docs/api/openapi.yaml",
-      "docs/security/threat-model.md",
-    ],
-  },
-  {
     phaseId: 3,
     phaseKey: "code",
     agentName: "CODE agent",

@@ -5,7 +5,7 @@ exports.PHASES = [
     {
         id: 0,
         key: "requirement",
-        label: "01 · Plan",
+        label: "1 · Plan",
         icon: "$(list-ordered)",
         lifecycleFile: "docs/lifecycle/00-requirement.md",
         promptFile: "docs/prompts/00-requirement.md",
@@ -13,19 +13,9 @@ exports.PHASES = [
         agentFile: "docs/agents/requirement-agent.md",
     },
     {
-        id: 2,
-        key: "design",
-        label: "02 · Design",
-        icon: "$(symbol-structure)",
-        lifecycleFile: "docs/lifecycle/02-design.md",
-        promptFile: "docs/prompts/02-design.md",
-        checklistFile: "docs/checklists/02-design-checklist.md",
-        agentFile: "docs/agents/architecture-agent.md",
-    },
-    {
         id: 3,
         key: "code",
-        label: "03 · Code",
+        label: "2 · Code",
         icon: "$(code)",
         lifecycleFile: "docs/lifecycle/03-code.md",
         promptFile: "docs/prompts/03-code.md",
@@ -35,7 +25,7 @@ exports.PHASES = [
     {
         id: 4,
         key: "build",
-        label: "04 · Build",
+        label: "3 · Build",
         icon: "$(tools)",
         lifecycleFile: "docs/lifecycle/04-build.md",
         promptFile: "docs/prompts/04-build.md",
@@ -45,7 +35,7 @@ exports.PHASES = [
     {
         id: 5,
         key: "test",
-        label: "05 · Test",
+        label: "4 · Test",
         icon: "$(beaker)",
         lifecycleFile: "docs/lifecycle/05-test.md",
         promptFile: "docs/prompts/05-test.md",
@@ -55,7 +45,7 @@ exports.PHASES = [
     {
         id: 6,
         key: "secure",
-        label: "06 · Secure & Comply",
+        label: "5 · Secure & Comply",
         icon: "$(shield)",
         lifecycleFile: "docs/lifecycle/06-secure-comply.md",
         promptFile: "docs/prompts/06-secure-comply.md",
@@ -65,7 +55,7 @@ exports.PHASES = [
     {
         id: 7,
         key: "release",
-        label: "07 · Release",
+        label: "6 · Release",
         icon: "$(tag)",
         lifecycleFile: "docs/lifecycle/07-release.md",
         promptFile: "docs/prompts/07-release.md",
@@ -75,7 +65,7 @@ exports.PHASES = [
     {
         id: 8,
         key: "deploy",
-        label: "08 · Deploy",
+        label: "7 · Deploy",
         icon: "$(rocket)",
         lifecycleFile: "docs/lifecycle/08-deploy.md",
         promptFile: "docs/prompts/08-deploy.md",
@@ -85,7 +75,7 @@ exports.PHASES = [
     {
         id: 9,
         key: "operate",
-        label: "09 · Operate",
+        label: "8 · Operate",
         icon: "$(gear)",
         lifecycleFile: "docs/lifecycle/09-operate.md",
         promptFile: "docs/prompts/09-operate.md",
@@ -95,7 +85,7 @@ exports.PHASES = [
     {
         id: 10,
         key: "monitor",
-        label: "10 · Monitor & Observe",
+        label: "9 · Monitor & Observe",
         icon: "$(graph)",
         lifecycleFile: "docs/lifecycle/10-monitor-observe.md",
         promptFile: "docs/prompts/10-monitor-observe.md",
@@ -105,7 +95,7 @@ exports.PHASES = [
     {
         id: 11,
         key: "incident",
-        label: "11 · Incident & Learn",
+        label: "10 · Incident & Learn",
         icon: "$(warning)",
         lifecycleFile: "docs/lifecycle/11-incident-learn.md",
         promptFile: "docs/prompts/11-incident-learn.md",
