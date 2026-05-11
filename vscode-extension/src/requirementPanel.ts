@@ -6,6 +6,7 @@ import * as vscode from "vscode";
 import { Phase } from "./phases";
 import { AiOutputSink, AiRunner } from "./aiRunner";
 import { resolveRepoRoot } from "./phasePanel";
+import { RepoInfo, getGithubRepoInfo, getGithubToken } from "./githubUtils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -14,11 +15,6 @@ interface SubmitMessage {
   moduleName: string;
   reqId: string;
   description: string;
-}
-
-interface RepoInfo {
-  owner: string;
-  repo: string;
 }
 
 type WorkflowStep = "input" | "review-requirements" | "gen-design" | "review-design" | "complete";
@@ -287,37 +283,6 @@ function buildIssueBody(
   return lines.join("\n");
 }
 
-function getGithubRepoInfo(repoRoot: string): RepoInfo | null {
-  try {
-    const remoteUrl = cp
-      .execSync("git remote get-url origin", { cwd: repoRoot, encoding: "utf8", timeout: 5000 })
-      .trim();
-
-    // https://github.com/owner/repo.git
-    const httpsMatch = remoteUrl.match(/github\.com[/:]([^/]+)\/([^/.]+?)(?:\.git)?$/);
-    if (httpsMatch) {
-      return { owner: httpsMatch[1], repo: httpsMatch[2] };
-    }
-
-    // git@github.com:owner/repo.git
-    const sshMatch = remoteUrl.match(/git@github\.com:([^/]+)\/([^/.]+?)(?:\.git)?$/);
-    if (sshMatch) {
-      return { owner: sshMatch[1], repo: sshMatch[2] };
-    }
-  } catch {
-    // git not available or no remote
-  }
-  return null;
-}
-
-async function getGithubToken(): Promise<string> {
-  const session = await vscode.authentication.getSession(
-    "github",
-    ["public_repo"],
-    { createIfNone: true }
-  );
-  return session.accessToken;
-}
 
 function createGithubIssue(
   token: string,

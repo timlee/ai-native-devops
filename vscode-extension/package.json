@@ -2,7 +2,7 @@
   "name": "ai-native-devops",
   "displayName": "AI-Native DevOps",
   "description": "Guide software development through the 11-phase AI-native DevOps lifecycle using Claude, Codex, or GitHub Copilot APIs",
-  "version": "0.3.6",
+  "version": "0.3.9",
   "publisher": "ai-native-devops",
   "license": "MIT",
   "repository": {
@@ -124,6 +124,11 @@
         "command": "aiNativeDevOps.openCodeWorkflow",
         "title": "Open Code Workflow",
         "category": "AI DevOps"
+      },
+      {
+        "command": "aiNativeDevOps.openBuildWorkflow",
+        "title": "Open Build Workflow",
+        "category": "AI DevOps"
       }
     ],
     "configuration": {
@@ -228,18 +233,23 @@
           "group": "inline@0"
         },
         {
+          "command": "aiNativeDevOps.openBuildWorkflow",
+          "when": "view == aiNativeDevOps.lifecycle && viewItem == phaseBuild",
+          "group": "inline@0"
+        },
+        {
           "command": "aiNativeDevOps.openPhase",
-          "when": "view == aiNativeDevOps.lifecycle && (viewItem == phase || viewItem == phaseRequirement || viewItem == phaseCode)",
+          "when": "view == aiNativeDevOps.lifecycle && (viewItem == phase || viewItem == phaseRequirement || viewItem == phaseCode || viewItem == phaseBuild)",
           "group": "inline@1"
         },
         {
           "command": "aiNativeDevOps.runPrompt",
-          "when": "view == aiNativeDevOps.lifecycle && (viewItem == phase || viewItem == phaseRequirement || viewItem == phaseCode)",
+          "when": "view == aiNativeDevOps.lifecycle && (viewItem == phase || viewItem == phaseRequirement || viewItem == phaseCode || viewItem == phaseBuild)",
           "group": "inline@2"
         },
         {
           "command": "aiNativeDevOps.openChecklist",
-          "when": "view == aiNativeDevOps.lifecycle && (viewItem == phase || viewItem == phaseRequirement || viewItem == phaseCode)",
+          "when": "view == aiNativeDevOps.lifecycle && (viewItem == phase || viewItem == phaseRequirement || viewItem == phaseCode || viewItem == phaseBuild)",
           "group": "inline@3"
         }
       ]

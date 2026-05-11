@@ -34,12 +34,12 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RequirementPanel = void 0;
-const cp = __importStar(require("child_process"));
 const fs = __importStar(require("fs"));
 const https = __importStar(require("https"));
 const path = __importStar(require("path"));
 const vscode = __importStar(require("vscode"));
 const phasePanel_1 = require("./phasePanel");
+const githubUtils_1 = require("./githubUtils");
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ISSUE_SECTIONS = [
     "User Stories",
@@ -225,31 +225,6 @@ function buildIssueBody(moduleName, reqId, description, requirements, design) {
         }
     }
     return lines.join("\n");
-}
-function getGithubRepoInfo(repoRoot) {
-    try {
-        const remoteUrl = cp
-            .execSync("git remote get-url origin", { cwd: repoRoot, encoding: "utf8", timeout: 5000 })
-            .trim();
-        // https://github.com/owner/repo.git
-        const httpsMatch = remoteUrl.match(/github\.com[/:]([^/]+)\/([^/.]+?)(?:\.git)?$/);
-        if (httpsMatch) {
-            return { owner: httpsMatch[1], repo: httpsMatch[2] };
-        }
-        // git@github.com:owner/repo.git
-        const sshMatch = remoteUrl.match(/git@github\.com:([^/]+)\/([^/.]+?)(?:\.git)?$/);
-        if (sshMatch) {
-            return { owner: sshMatch[1], repo: sshMatch[2] };
-        }
-    }
-    catch {
-        // git not available or no remote
-    }
-    return null;
-}
-async function getGithubToken() {
-    const session = await vscode.authentication.getSession("github", ["public_repo"], { createIfNone: true });
-    return session.accessToken;
 }
 function createGithubIssue(token, owner, repo, title, body, labels) {
     return new Promise((resolve, reject) => {
@@ -469,7 +444,7 @@ class RequirementPanel {
             let owner = cfg.get("githubOwner", "").trim();
             let repo = cfg.get("githubRepo", "").trim();
             if (!owner || !repo) {
-                const info = getGithubRepoInfo(this._repoRoot);
+                const info = (0, githubUtils_1.getGithubRepoInfo)(this._repoRoot);
                 if (!info) {
                     throw new Error("Cannot detect GitHub owner/repo from git remote. " +
                         "Set aiNativeDevOps.githubOwner and aiNativeDevOps.githubRepo in settings.");
@@ -477,7 +452,7 @@ class RequirementPanel {
                 owner = info.owner;
                 repo = info.repo;
             }
-            const token = await getGithubToken();
+            const token = await (0, githubUtils_1.getGithubToken)();
             const title = `[${reqId}] ${moduleName}`;
             const body = buildIssueBody(moduleName, reqId, this._workflowCtx.description, this._workflowCtx.requirements, artifacts);
             const { url, number } = await createGithubIssue(token, owner, repo, title, body, ["requirement", "design", "ai-generated"]);

@@ -9,6 +9,7 @@ import { HomePanel } from "./homePanel";
 import { ChecklistPanel } from "./checklistPanel";
 import { RequirementPanel } from "./requirementPanel";
 import { CodePanel } from "./codePanel";
+import { BuildPanel } from "./buildPanel";
 import { AiOutputSink, AiRunner } from "./aiRunner";
 import {
   buildAutomationPrompt,
@@ -297,6 +298,16 @@ export function activate(context: vscode.ExtensionContext) {
         const p = resolvePhaseArg(phaseArg) ?? PHASES.find(ph => ph.key === "code");
         if (!p) return;
         CodePanel.show(p, context, aiRunner);
+      }
+    ),
+
+    // Open build workflow panel (Phase 04)
+    vscode.commands.registerCommand(
+      "aiNativeDevOps.openBuildWorkflow",
+      (phaseArg?: unknown) => {
+        const p = resolvePhaseArg(phaseArg) ?? PHASES.find(ph => ph.key === "build");
+        if (!p) return;
+        BuildPanel.show(p, context, aiRunner);
       }
     ),
 

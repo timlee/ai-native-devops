@@ -9,7 +9,13 @@ export class LifecycleTreeItem extends vscode.TreeItem {
     public readonly resourceUri?: vscode.Uri
   ) {
     super(phase.label, vscode.TreeItemCollapsibleState.None);
-    this.contextValue = phase.id === 0 ? "phaseRequirement" : phase.key === "code" ? "phaseCode" : "phase";
+    this.contextValue = phase.id === 0
+      ? "phaseRequirement"
+      : phase.key === "code"
+        ? "phaseCode"
+        : phase.key === "build"
+          ? "phaseBuild"
+          : "phase";
     this.description = isActive ? "active" : "";
 
     const tooltip = new vscode.MarkdownString(
@@ -28,8 +34,20 @@ export class LifecycleTreeItem extends vscode.TreeItem {
     }
 
     this.command = {
-      command: phase.id === 0 ? "aiNativeDevOps.openRequirement" : phase.key === "code" ? "aiNativeDevOps.openCodeWorkflow" : "aiNativeDevOps.openPhase",
-      title: phase.id === 0 ? "Open Requirement Intake" : phase.key === "code" ? "Open Code Workflow" : "Open Phase Guide",
+      command: phase.id === 0
+        ? "aiNativeDevOps.openRequirement"
+        : phase.key === "code"
+          ? "aiNativeDevOps.openCodeWorkflow"
+          : phase.key === "build"
+            ? "aiNativeDevOps.openBuildWorkflow"
+            : "aiNativeDevOps.openPhase",
+      title: phase.id === 0
+        ? "Open Requirement Intake"
+        : phase.key === "code"
+          ? "Open Code Workflow"
+          : phase.key === "build"
+            ? "Open Build Workflow"
+            : "Open Phase Guide",
       arguments: [phase],
     };
   }

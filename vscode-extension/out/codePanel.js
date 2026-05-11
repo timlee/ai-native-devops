@@ -35,65 +35,10 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CodePanel = void 0;
 const cp = __importStar(require("child_process"));
-const https = __importStar(require("https"));
 const vscode = __importStar(require("vscode"));
 const phasePanel_1 = require("./phasePanel");
+const githubUtils_1 = require("./githubUtils");
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function getGithubRepoInfo(repoRoot) {
-    try {
-        const remoteUrl = cp
-            .execSync("git remote get-url origin", { cwd: repoRoot, encoding: "utf8", timeout: 5000 })
-            .trim();
-        const httpsMatch = remoteUrl.match(/github\.com[/:]([^/]+)\/([^/.]+?)(?:\.git)?$/);
-        if (httpsMatch) {
-            return { owner: httpsMatch[1], repo: httpsMatch[2] };
-        }
-        const sshMatch = remoteUrl.match(/git@github\.com:([^/]+)\/([^/.]+?)(?:\.git)?$/);
-        if (sshMatch) {
-            return { owner: sshMatch[1], repo: sshMatch[2] };
-        }
-    }
-    catch { /* no remote */ }
-    return null;
-}
-async function getGithubToken() {
-    const session = await vscode.authentication.getSession("github", ["public_repo", "repo"], { createIfNone: true });
-    return session.accessToken;
-}
-function githubRequest(method, path, token, body) {
-    return new Promise((resolve, reject) => {
-        const payload = body ? JSON.stringify(body) : undefined;
-        const req = https.request({
-            hostname: "api.github.com",
-            path,
-            method,
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Accept": "application/vnd.github+json",
-                "Content-Type": "application/json",
-                ...(payload ? { "Content-Length": Buffer.byteLength(payload) } : {}),
-                "User-Agent": "ai-native-devops-vscode",
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
-        }, (res) => {
-            let raw = "";
-            res.on("data", (chunk) => { raw += chunk; });
-            res.on("end", () => {
-                try {
-                    resolve({ status: res.statusCode ?? 0, data: JSON.parse(raw) });
-                }
-                catch {
-                    reject(new Error("Failed to parse GitHub API response"));
-                }
-            });
-        });
-        req.on("error", reject);
-        if (payload) {
-            req.write(payload);
-        }
-        req.end();
-    });
-}
 function buildCodePrompt(issue, branchName, additionalContext) {
     return [
         "You are the CODE phase AI agent in an AI-native DevOps workflow.",
@@ -218,8 +163,8 @@ class CodePanel {
     async _handleFetchIssues() {
         this._panel.webview.postMessage({ command: "issuesLoading" });
         try {
-            const token = await getGithubToken();
-            const repoInfo = getGithubRepoInfo(this._repoRoot);
+            const token = await (0, githubUtils_1.getGithubToken)();
+            const repoInfo = (0, githubUtils_1.getGithubRepoInfo)(this._repoRoot);
             if (!repoInfo) {
                 const cfg = vscode.workspace.getConfiguration("aiNativeDevOps");
                 const owner = cfg.get("githubOwner", "");
@@ -245,7 +190,7 @@ class CodePanel {
         }
     }
     async _fetchAndSendIssues(token, owner, repo) {
-        const result = await githubRequest("GET", `/repos/${owner}/${repo}/issues?state=open&per_page=50`, token);
+        const result = await (0, githubUtils_1.githubRequest)("GET", `/repos/${owner}/${repo}/issues?state=open&per_page=50`, token);
         if (!Array.isArray(result.data)) {
             const err = result.data.message ?? `HTTP ${result.status}`;
             this._panel.webview.postMessage({ command: "issuesError", text: err });
@@ -413,8 +358,8 @@ class CodePanel {
         }
         this._panel.webview.postMessage({ command: "prCreating" });
         try {
-            const token = await getGithubToken();
-            const repoInfo = getGithubRepoInfo(this._repoRoot);
+            const token = await (0, githubUtils_1.getGithubToken)();
+            const repoInfo = (0, githubUtils_1.getGithubRepoInfo)(this._repoRoot);
             const cfg = vscode.workspace.getConfiguration("aiNativeDevOps");
             const owner = repoInfo?.owner ?? cfg.get("githubOwner", "");
             const repo = repoInfo?.repo ?? cfg.get("githubRepo", "");
@@ -426,7 +371,7 @@ class CodePanel {
                 return;
             }
             const branchName = this._workflowCtx.branchName ?? "";
-            const prResult = await githubRequest("POST", `/repos/${owner}/${repo}/pulls`, token, { title: title.trim(), body, head: branchName, base: baseBranch, draft: false });
+            const prResult = await (0, githubUtils_1.githubRequest)("POST", `/repos/${owner}/${repo}/pulls`, token, { title: title.trim(), body, head: branchName, base: baseBranch, draft: false });
             if (prResult.status === 422) {
                 this._panel.webview.postMessage({
                     command: "prError",
@@ -459,9 +404,9 @@ class CodePanel {
             const prComment = this._workflowCtx.aiOutput?.trim()
                 ? `## AI Code Assistance Summary\n\n${this._workflowCtx.aiOutput.slice(0, 1000)}${this._workflowCtx.aiOutput.length > 1000 ? "\n\n_…(truncated)_" : ""}\n\n_Posted by AI-Native DevOps extension_`
                 : `_Implementation completed via AI-Native DevOps extension — Code Phase._`;
-            githubRequest("POST", `/repos/${owner}/${repo}/issues/${issue.number}/comments`, token, { body: issueComment })
+            (0, githubUtils_1.githubRequest)("POST", `/repos/${owner}/${repo}/issues/${issue.number}/comments`, token, { body: issueComment })
                 .catch((e) => vscode.window.showWarningMessage(`Could not comment on issue: ${e.message}`));
-            githubRequest("POST", `/repos/${owner}/${repo}/issues/${prNumber}/comments`, token, { body: prComment })
+            (0, githubUtils_1.githubRequest)("POST", `/repos/${owner}/${repo}/issues/${prNumber}/comments`, token, { body: prComment })
                 .catch((e) => vscode.window.showWarningMessage(`Could not comment on PR: ${e.message}`));
         }
         catch (err) {
