@@ -9,7 +9,17 @@
       "Bash(node -e \"console.log\\(require\\('./package.json'\\).version\\)\")",
       "Bash(npx @vscode/vsce package --out vsix/ai-native-devops-0.3.6.vsix)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\wtlee\\\\Documents\\\\GitHub\\\\ai-native-devops\" -Force)",
-      "Bash(Select-Object Name, PSIsContainer)"
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Get-ChildItem -Recurse -Force)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Format-Table -AutoSize)",
+      "Read(//c/Users/wtlee/Documents/GitHub/**)",
+      "Bash(tsconfig)",
+      "Bash(vite)",
+      "Bash(jest)",
+      "Bash(vitest)",
+      "Bash(pytest\")"
     ]
   }
 }

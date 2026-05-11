@@ -1,0 +1,7 @@
+{"id":"evt-001","timestamp":"2026-05-12T00:00:00Z","source":"github","phaseId":0,"triggerId":"manual_input","title":"User login requirement","context":"Users must authenticate with MFA"}
+{"id":"evt-002","timestamp":"2026-05-12T00:01:00Z","source":"github","phaseKey":"code","triggerId":"ai_code","title":"Implement auth module"}
+{"id":"evt-003","timestamp":"2026-05-12T00:02:00Z","source":"github","phaseId":5,"phaseKey":"test","triggerId":"pr_opened","title":"Add tests for auth","context":"Cover unit and integration paths","metadata":{"pr":42,"repo":"ai-native-devops"}}
+{"id":"evt-004","source":"jira","phaseKey":"unknown-phase","title":"Unknown phase event"}
+{"id":"evt-005","source":"slack","title":"No phase specified"}
+MALFORMED JSON LINE — should be skipped
+{"id":"evt-006","source":"github","phaseId":3,"title":"After malformed line — should parse fine"}
