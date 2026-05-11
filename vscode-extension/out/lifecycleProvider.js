@@ -42,7 +42,13 @@ class LifecycleTreeItem extends vscode.TreeItem {
         this.phase = phase;
         this.isActive = isActive;
         this.resourceUri = resourceUri;
-        this.contextValue = phase.id === 0 ? "phaseRequirement" : phase.key === "code" ? "phaseCode" : "phase";
+        this.contextValue = phase.id === 0
+            ? "phaseRequirement"
+            : phase.key === "code"
+                ? "phaseCode"
+                : phase.key === "build"
+                    ? "phaseBuild"
+                    : "phase";
         this.description = isActive ? "active" : "";
         const tooltip = new vscode.MarkdownString(`**${phase.label}**\n\nPhase ${phase.id} of 11 · Click to open guide`);
         tooltip.isTrusted = true;
@@ -54,8 +60,20 @@ class LifecycleTreeItem extends vscode.TreeItem {
             this.iconPath = new vscode.ThemeIcon("circle-outline");
         }
         this.command = {
-            command: phase.id === 0 ? "aiNativeDevOps.openRequirement" : phase.key === "code" ? "aiNativeDevOps.openCodeWorkflow" : "aiNativeDevOps.openPhase",
-            title: phase.id === 0 ? "Open Requirement Intake" : phase.key === "code" ? "Open Code Workflow" : "Open Phase Guide",
+            command: phase.id === 0
+                ? "aiNativeDevOps.openRequirement"
+                : phase.key === "code"
+                    ? "aiNativeDevOps.openCodeWorkflow"
+                    : phase.key === "build"
+                        ? "aiNativeDevOps.openBuildWorkflow"
+                        : "aiNativeDevOps.openPhase",
+            title: phase.id === 0
+                ? "Open Requirement Intake"
+                : phase.key === "code"
+                    ? "Open Code Workflow"
+                    : phase.key === "build"
+                        ? "Open Build Workflow"
+                        : "Open Phase Guide",
             arguments: [phase],
         };
     }

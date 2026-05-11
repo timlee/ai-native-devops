@@ -46,6 +46,7 @@ const homePanel_1 = require("./homePanel");
 const checklistPanel_1 = require("./checklistPanel");
 const requirementPanel_1 = require("./requirementPanel");
 const codePanel_1 = require("./codePanel");
+const buildPanel_1 = require("./buildPanel");
 const aiRunner_1 = require("./aiRunner");
 const agentAutomation_1 = require("./agentAutomation");
 const phasePanel_2 = require("./phasePanel");
@@ -251,6 +252,13 @@ function activate(context) {
         if (!p)
             return;
         codePanel_1.CodePanel.show(p, context, aiRunner);
+    }), 
+    // Open build workflow panel (Phase 04)
+    vscode.commands.registerCommand("aiNativeDevOps.openBuildWorkflow", (phaseArg) => {
+        const p = resolvePhaseArg(phaseArg) ?? phases_1.PHASES.find(ph => ph.key === "build");
+        if (!p)
+            return;
+        buildPanel_1.BuildPanel.show(p, context, aiRunner);
     }), 
     // Generate PR draft body for CODE agent output
     vscode.commands.registerCommand("aiNativeDevOps.generateCodePrTemplate", async () => {
