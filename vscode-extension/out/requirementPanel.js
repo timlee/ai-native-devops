@@ -42,9 +42,11 @@ const phasePanel_1 = require("./phasePanel");
 const githubUtils_1 = require("./githubUtils");
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ISSUE_SECTIONS = [
-    "User Stories",
+    "User Story",
+    "BDD Scenario",
     "Acceptance Criteria",
-    "Backlog Items",
+    "Technical Constraints",
+    "Tasks",
 ];
 const ALL_DESIGN_ARTIFACTS = [
     "Architecture Diagram",
@@ -54,9 +56,11 @@ const ALL_DESIGN_ARTIFACTS = [
     "Threat Model",
 ];
 const SECTION_FILES = {
-    "User Stories": "plan/user-stories.md",
+    "User Story": "plan/user-story.md",
+    "BDD Scenario": "plan/bdd-scenario.md",
     "Acceptance Criteria": "plan/acceptance-criteria.md",
-    "Backlog Items": "plan/backlog-items.md",
+    "Technical Constraints": "plan/technical-constraints.md",
+    "Tasks": "plan/tasks.md",
 };
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function buildPrompt(moduleName, reqId, description) {
@@ -69,17 +73,21 @@ function buildPrompt(moduleName, reqId, description) {
         `- Description: ${description}`,
         "",
         "Task:",
-        "Generate three planning artifacts for this requirement as structured Markdown.",
+        "Generate five planning artifacts for this requirement as structured Markdown.",
         "Use these exact ## headings in this order (no text before the first heading):",
         "",
-        "## User Stories",
+        "## User Story",
+        "## BDD Scenario",
         "## Acceptance Criteria",
-        "## Backlog Items",
+        "## Technical Constraints",
+        "## Tasks",
         "",
         "Guidelines:",
-        "- User Stories: Write exactly ONE user story in the form \"As a <role>, I want <goal>, so that <benefit>\".",
-        "- Acceptance Criteria: Write measurable checkbox conditions (- [ ]) that directly verify the single user story above.",
-        "- Backlog Items: Write a prioritized task list derived from the single user story with P0/P1/P2 labels and S/M/L effort estimates.",
+        "- User Story: Write exactly ONE user story in the form \"As a <role>, I want <goal>, so that <benefit>\".",
+        "- BDD Scenario: Write exactly ONE Gherkin scenario (Scenario: <title>, Given <context>, When <action>, Then <outcome>) that directly exercises the user story above.",
+        "- Acceptance Criteria: Write measurable checkbox conditions (- [ ]) that directly verify the BDD scenario above.",
+        "- Technical Constraints: List only technical, architectural, and platform-specific constraints that bound the implementation (bulleted list).",
+        "- Tasks: Write a prioritized list of actionable development tasks derived from the scenario with P0/P1/P2 labels and S/M/L effort estimates.",
         "",
         "Output structured Markdown only. Do not add any text before the first ## heading.",
     ].join("\n");
@@ -101,14 +109,17 @@ function buildDesignPrompt(moduleName, reqId, description, requirements, selecte
         `- ID: ${reqId}`,
         `- Description: ${description}`,
         "",
-        "## User Stories (confirmed by user)",
-        requirements.userStories,
+        "## User Story (confirmed by user)",
+        requirements.userStory,
+        "",
+        "## BDD Scenario (confirmed by user)",
+        requirements.bddScenario,
         "",
         "## Acceptance Criteria (confirmed by user)",
         requirements.acceptanceCriteria,
         "",
-        "## Backlog Items (confirmed by user)",
-        requirements.backlogItems,
+        "## Tasks (confirmed by user)",
+        requirements.tasks,
         "",
         ...(requirements.planningNotes.trim()
             ? [`## Planning Notes (confirmed by user)`, requirements.planningNotes, ""]
@@ -200,9 +211,11 @@ function buildIssueBody(moduleName, reqId, description, requirements, design) {
         "",
     ];
     const reqMap = [
-        ["User Stories", requirements.userStories],
+        ["User Story", requirements.userStory],
+        ["BDD Scenario", requirements.bddScenario],
         ["Acceptance Criteria", requirements.acceptanceCriteria],
-        ["Backlog Items", requirements.backlogItems],
+        ["Technical Constraints", requirements.technicalConstraints],
+        ["Tasks", requirements.tasks],
         ["Planning Notes", requirements.planningNotes],
     ];
     for (const [heading, content] of reqMap) {
@@ -317,7 +330,7 @@ class RequirementPanel {
         RequirementPanel._current = new RequirementPanel(phase, context, aiRunner);
     }
     async _handleSubmit(moduleName, reqId, description) {
-        if (!moduleName.trim() || !reqId.trim() || !description.trim()) {
+        if (!reqId.trim() || !description.trim()) {
             this._panel.webview.postMessage({ command: "validationError", text: "All fields are required." });
             return;
         }
@@ -345,9 +358,11 @@ class RequirementPanel {
                 }
                 const sections = parseSections(this._rawOutput);
                 const artifacts = {
-                    userStories: sections.get("User Stories") ?? "",
+                    userStory: sections.get("User Story") ?? "",
+                    bddScenario: sections.get("BDD Scenario") ?? "",
                     acceptanceCriteria: sections.get("Acceptance Criteria") ?? "",
-                    backlogItems: sections.get("Backlog Items") ?? "",
+                    technicalConstraints: sections.get("Technical Constraints") ?? "",
+                    tasks: sections.get("Tasks") ?? "",
                     planningNotes: "",
                 };
                 this._workflowCtx.requirements = artifacts;
@@ -385,9 +400,11 @@ class RequirementPanel {
         this._workflowCtx.selectedArtifacts = selectedArtifacts;
         const { moduleName, reqId } = this._workflowCtx;
         const sections = new Map([
-            ["User Stories", artifacts.userStories],
+            ["User Story", artifacts.userStory],
+            ["BDD Scenario", artifacts.bddScenario],
             ["Acceptance Criteria", artifacts.acceptanceCriteria],
-            ["Backlog Items", artifacts.backlogItems],
+            ["Technical Constraints", artifacts.technicalConstraints],
+            ["Tasks", artifacts.tasks],
         ]);
         const written = writeArtifacts(this._repoRoot, moduleName, reqId, sections, artifacts.planningNotes);
         this._panel.webview.postMessage({ command: "filesReady", files: written, phase: "requirements" });
@@ -659,18 +676,12 @@ class RequirementPanel {
 
 <!-- Step 1: Input -->
 <section id="sectionStep1">
-  <div class="field-row">
-    <div class="field">
-      <label for="moduleName">Module Name</label>
-      <input type="text" id="moduleName" placeholder="e.g. User Authentication">
-    </div>
-    <div class="field">
-      <label for="reqId">Requirement ID</label>
-      <input type="text" id="reqId" placeholder="e.g. REQ-001">
-    </div>
+  <div class="field">
+    <label for="reqId">Requirement ID</label>
+    <input type="text" id="reqId" placeholder="e.g. REQ-001">
   </div>
   <div class="field">
-    <label for="description">Description</label>
+    <label for="description">Goal</label>
     <textarea id="description" placeholder="Describe what needs to be built — goals, constraints, user types, edge cases..."></textarea>
   </div>
   <div class="error-msg" id="validationError"></div>
@@ -686,16 +697,24 @@ class RequirementPanel {
   <div id="reqReviewArea" style="display:none">
     <p class="review-hint">Review and edit each artifact, then click Confirm &amp; Continue.</p>
     <div class="artifact-group">
-      <label class="artifact-label" for="ta-userStories">User Stories</label>
-      <textarea class="artifact-ta" id="ta-userStories"></textarea>
+      <label class="artifact-label" for="ta-userStory">User Story</label>
+      <textarea class="artifact-ta" id="ta-userStory"></textarea>
+    </div>
+    <div class="artifact-group">
+      <label class="artifact-label" for="ta-bddScenario">BDD Scenario</label>
+      <textarea class="artifact-ta" id="ta-bddScenario"></textarea>
     </div>
     <div class="artifact-group">
       <label class="artifact-label" for="ta-acceptanceCriteria">Acceptance Criteria</label>
       <textarea class="artifact-ta" id="ta-acceptanceCriteria"></textarea>
     </div>
     <div class="artifact-group">
-      <label class="artifact-label" for="ta-backlogItems">Backlog Items</label>
-      <textarea class="artifact-ta" id="ta-backlogItems"></textarea>
+      <label class="artifact-label" for="ta-technicalConstraints">Technical Constraints</label>
+      <textarea class="artifact-ta" id="ta-technicalConstraints"></textarea>
+    </div>
+    <div class="artifact-group">
+      <label class="artifact-label" for="ta-tasks">Tasks</label>
+      <textarea class="artifact-ta" id="ta-tasks"></textarea>
     </div>
     <div class="artifact-group">
       <label class="artifact-label" for="ta-planningNotes">Planning Notes</label>
@@ -791,17 +810,16 @@ class RequirementPanel {
   }
 
   function submitForm() {
-    const moduleName = document.getElementById('moduleName').value.trim();
     const reqId = document.getElementById('reqId').value.trim();
     const description = document.getElementById('description').value.trim();
     const errEl = document.getElementById('validationError');
     errEl.textContent = '';
-    if (!moduleName || !reqId || !description) {
+    if (!reqId || !description) {
       errEl.textContent = 'All fields are required.';
       return;
     }
     document.getElementById('submitBtn').disabled = true;
-    vscode.postMessage({ command: 'submit', moduleName, reqId, description });
+    vscode.postMessage({ command: 'submit', moduleName: '', reqId, description });
   }
 
   function confirmRequirements() {
@@ -811,9 +829,11 @@ class RequirementPanel {
     ).map(cb => cb.value);
     vscode.postMessage({
       command: 'confirmRequirements',
-      userStories:         document.getElementById('ta-userStories').value,
+      userStory:           document.getElementById('ta-userStory').value,
+      bddScenario:         document.getElementById('ta-bddScenario').value,
       acceptanceCriteria:  document.getElementById('ta-acceptanceCriteria').value,
-      backlogItems:        document.getElementById('ta-backlogItems').value,
+      technicalConstraints: document.getElementById('ta-technicalConstraints').value,
+      tasks:               document.getElementById('ta-tasks').value,
       planningNotes:       document.getElementById('ta-planningNotes').value,
       selectedArtifacts,
     });
@@ -890,7 +910,6 @@ class RequirementPanel {
     unmarkStepDone(3);
     unmarkStepDone(4);
 
-    document.getElementById('moduleName').value = '';
     document.getElementById('reqId').value = '';
     document.getElementById('description').value = '';
     document.getElementById('validationError').textContent = '';
@@ -986,9 +1005,11 @@ class RequirementPanel {
         }
       } else {
         document.getElementById('reqSpinner').style.display = 'none';
-        document.getElementById('ta-userStories').value         = a.userStories || '';
+        document.getElementById('ta-userStory').value           = a.userStory || '';
+        document.getElementById('ta-bddScenario').value         = a.bddScenario || '';
         document.getElementById('ta-acceptanceCriteria').value  = a.acceptanceCriteria || '';
-        document.getElementById('ta-backlogItems').value        = a.backlogItems || '';
+        document.getElementById('ta-technicalConstraints').value = a.technicalConstraints || '';
+        document.getElementById('ta-tasks').value               = a.tasks || '';
         document.getElementById('ta-planningNotes').value       = '';
         document.getElementById('reqReviewArea').style.display = '';
       }

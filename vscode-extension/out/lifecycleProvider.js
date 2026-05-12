@@ -50,7 +50,9 @@ class LifecycleTreeItem extends vscode.TreeItem {
                     ? "phaseBuild"
                     : phase.key === "test"
                         ? "phaseTest"
-                        : "phase";
+                        : phase.key === "secure"
+                            ? "phaseSecure"
+                            : "phase";
         this.description = isActive ? "active" : "";
         const tooltip = new vscode.MarkdownString(`**${phase.label}**\n\nPhase ${phase.id} of 11 · Click to open guide`);
         tooltip.isTrusted = true;
@@ -70,7 +72,9 @@ class LifecycleTreeItem extends vscode.TreeItem {
                         ? "aiNativeDevOps.openBuildWorkflow"
                         : phase.key === "test"
                             ? "aiNativeDevOps.openTestWorkflow"
-                            : "aiNativeDevOps.openPhase",
+                            : phase.key === "secure"
+                                ? "aiNativeDevOps.openChecklist"
+                                : "aiNativeDevOps.openPhase",
             title: phase.id === 0
                 ? "Open Requirement Intake"
                 : phase.key === "code"
@@ -79,7 +83,9 @@ class LifecycleTreeItem extends vscode.TreeItem {
                         ? "Open Build Workflow"
                         : phase.key === "test"
                             ? "Open Test Workflow"
-                            : "Open Phase Guide",
+                            : phase.key === "secure"
+                                ? "Open Security Checklist"
+                                : "Open Phase Guide",
             arguments: [phase],
         };
     }
