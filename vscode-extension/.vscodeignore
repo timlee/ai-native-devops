@@ -1,3 +1,12 @@
 node_modules/
 *.vsix
 .vscode-test/
+.vscode-test.mjs
+test/
+coverage/
+src/
+.eslintrc.json
+jest.config.js
+tsconfig.json
+tsconfig.test.json
+**/*.map

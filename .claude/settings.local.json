@@ -14,7 +14,24 @@
       "Bash(npx vsce *)",
       "Bash(npm version *)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\wtlee\\\\Documents\\\\GitHub\\\\ai-native-devops\\\\vscode-extension\\\\src\" -Recurse -Name)",
-      "Bash(npx @vscode/vsce package)"
+      "Bash(npx @vscode/vsce package)",
+      "Bash(xargs wc -l)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\wtlee\\\\Documents\\\\GitHub\\\\ai-native-devops\\\\.github\\\\workflows\" -ErrorAction SilentlyContinue)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:d[k] for k in ['version','main','exports','bin'] if k in d}, indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('version:', d['version']\\)\")",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/c/Users/wtlee/Documents/GitHub/ai-native-devops/vscode-extension/node_modules/glob/package.json'\\)\\); print\\('exports:', json.dumps\\(d.get\\('exports', 'none'\\), indent=2\\)\\); print\\('main:', d.get\\('main', 'none'\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('peerDependencies', {}\\), indent=2\\)\\); print\\(json.dumps\\(d.get\\('dependencies', {}\\), indent=2\\)\\)\")",
+      "Bash(cat /c/Users/wtlee/Documents/GitHub\\\\ai-native-devops/vscode-extension/.vscodeignore)",
+      "Read(//c/Users/wtlee/Documents/GitHubai-native-devops/vscode-extension/**)",
+      "Bash(node -e \"const g = require\\('/c/Users/wtlee/Documents/GitHub/ai-native-devops/vscode-extension/node_modules/glob/glob.js'\\); console.log\\(typeof g, typeof g.glob\\)\")",
+      "Bash(grep -E \"\\\\.yml$\")",
+      "Bash(awk '{print $NF}')",
+      "Bash(ls /mnt/c/Users/wtlee/Documents/GitHub/ai-native-devops/vscode-extension/src/)",
+      "Read(//mnt/c/Users/wtlee/Documents/GitHub/ai-native-devops/vscode-extension/**)",
+      "Bash(ls /mnt/c/Users/wtlee/Documents/GitHub/ai-native-devops/.github/workflows/)",
+      "Read(//mnt/c/Users/wtlee/Documents/GitHub/ai-native-devops/.github/**)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(p.version, p.scripts.package\\)\")",
+      "Bash(Move-Item \"c:\\\\Users\\\\wtlee\\\\Documents\\\\GitHub\\\\ai-native-devops\\\\vscode-extension\\\\ai-native-devops-0.4.2.vsix\" \"c:\\\\Users\\\\wtlee\\\\Documents\\\\GitHub\\\\ai-native-devops\\\\vscode-extension\\\\vsix\\\\ai-native-devops-0.4.2.vsix\" -Force)"
     ]
   }
 }

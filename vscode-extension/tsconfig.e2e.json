@@ -3,13 +3,19 @@
     "module": "commonjs",
     "target": "ES2020",
     "lib": ["ES2020"],
-    "outDir": "./out",
-    "rootDir": "./src",
+    "rootDir": "test/e2e",
+    "outDir": "test/e2e",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "declaration": false
+    "declaration": false,
+    "types": ["mocha", "node"]
   },
-  "exclude": ["node_modules", ".vscode-test", "test"]
+  "include": [
+    "test/e2e/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
