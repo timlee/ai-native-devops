@@ -48,6 +48,7 @@ const ISSUE_SECTIONS = [
     "Technical Constraints",
     "Tasks",
 ];
+const ALL_REQ_ARTIFACTS = [...ISSUE_SECTIONS];
 const ALL_DESIGN_ARTIFACTS = [
     "Architecture Diagram",
     "ADR",
@@ -63,7 +64,15 @@ const SECTION_FILES = {
     "Tasks": "plan/tasks.md",
 };
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function buildPrompt(moduleName, reqId, description) {
+const REQ_ARTIFACT_DEFS = [
+    { name: "User Story", heading: "## User Story", guide: "- User Story: Write exactly ONE user story in the form \"As a <role>, I want <goal>, so that <benefit>\"." },
+    { name: "BDD Scenario", heading: "## BDD Scenario", guide: "- BDD Scenario: Write exactly ONE Gherkin scenario (Scenario: <title>, Given <context>, When <action>, Then <outcome>) that directly exercises the requirement." },
+    { name: "Acceptance Criteria", heading: "## Acceptance Criteria", guide: "- Acceptance Criteria: Write measurable checkbox conditions (- [ ]) that directly verify the requirement." },
+    { name: "Technical Constraints", heading: "## Technical Constraints", guide: "- Technical Constraints: List only technical, architectural, and platform-specific constraints that bound the implementation (bulleted list)." },
+    { name: "Tasks", heading: "## Tasks", guide: "- Tasks: Write a prioritized list of actionable development tasks with P0/P1/P2 labels and S/M/L effort estimates." },
+];
+function buildPrompt(moduleName, reqId, description, selectedArtifacts) {
+    const selected = REQ_ARTIFACT_DEFS.filter(a => selectedArtifacts.includes(a.name));
     return [
         "You are the REQUIREMENT phase AI agent.",
         "",
@@ -73,21 +82,13 @@ function buildPrompt(moduleName, reqId, description) {
         `- Description: ${description}`,
         "",
         "Task:",
-        "Generate five planning artifacts for this requirement as structured Markdown.",
+        `Generate ${selected.length} planning artifact${selected.length !== 1 ? "s" : ""} for this requirement as structured Markdown.`,
         "Use these exact ## headings in this order (no text before the first heading):",
         "",
-        "## User Story",
-        "## BDD Scenario",
-        "## Acceptance Criteria",
-        "## Technical Constraints",
-        "## Tasks",
+        ...selected.map(a => a.heading),
         "",
         "Guidelines:",
-        "- User Story: Write exactly ONE user story in the form \"As a <role>, I want <goal>, so that <benefit>\".",
-        "- BDD Scenario: Write exactly ONE Gherkin scenario (Scenario: <title>, Given <context>, When <action>, Then <outcome>) that directly exercises the user story above.",
-        "- Acceptance Criteria: Write measurable checkbox conditions (- [ ]) that directly verify the BDD scenario above.",
-        "- Technical Constraints: List only technical, architectural, and platform-specific constraints that bound the implementation (bulleted list).",
-        "- Tasks: Write a prioritized list of actionable development tasks derived from the scenario with P0/P1/P2 labels and S/M/L effort estimates.",
+        ...selected.map(a => a.guide),
         "",
         "Output structured Markdown only. Do not add any text before the first ## heading.",
     ].join("\n");
@@ -298,7 +299,7 @@ class RequirementPanel {
         this._panel.webview.onDidReceiveMessage((msg) => {
             switch (msg.command) {
                 case "submit":
-                    this._handleSubmit(msg.moduleName ?? "", msg.reqId ?? "", msg.description ?? "");
+                    this._handleSubmit(msg.moduleName ?? "", msg.reqId ?? "", msg.description ?? "", msg.selectedReqArtifacts ?? [...ALL_REQ_ARTIFACTS]);
                     break;
                 case "confirmRequirements":
                     this._handleConfirmRequirements(msg, msg.selectedArtifacts ?? [...ALL_DESIGN_ARTIFACTS]);
@@ -329,9 +330,13 @@ class RequirementPanel {
         }
         RequirementPanel._current = new RequirementPanel(phase, context, aiRunner);
     }
-    async _handleSubmit(moduleName, reqId, description) {
+    async _handleSubmit(moduleName, reqId, description, selectedReqArtifacts) {
         if (!reqId.trim() || !description.trim()) {
             this._panel.webview.postMessage({ command: "validationError", text: "All fields are required." });
+            return;
+        }
+        if (selectedReqArtifacts.length === 0) {
+            this._panel.webview.postMessage({ command: "validationError", text: "Select at least one artifact to generate." });
             return;
         }
         this._rawOutput = "";
@@ -341,9 +346,10 @@ class RequirementPanel {
             moduleName: moduleName.trim(),
             reqId: reqId.trim(),
             description: description.trim(),
+            selectedReqArtifacts,
         };
         this._panel.webview.postMessage({ command: "started", step: "review-requirements" });
-        const prompt = buildPrompt(this._workflowCtx.moduleName, this._workflowCtx.reqId, this._workflowCtx.description);
+        const prompt = buildPrompt(this._workflowCtx.moduleName, this._workflowCtx.reqId, this._workflowCtx.description, selectedReqArtifacts);
         const sink = {
             appendAiChunk: (chunk) => {
                 if (this._cancelled) {
@@ -366,7 +372,7 @@ class RequirementPanel {
                     planningNotes: "",
                 };
                 this._workflowCtx.requirements = artifacts;
-                this._panel.webview.postMessage({ command: "aiDone", artifacts });
+                this._panel.webview.postMessage({ command: "aiDone", artifacts, selectedReqArtifacts });
             },
             aiError: (msg) => {
                 if (this._cancelled) {
@@ -684,6 +690,14 @@ class RequirementPanel {
     <label for="description">Goal</label>
     <textarea id="description" placeholder="Describe what needs to be built — goals, constraints, user types, edge cases..."></textarea>
   </div>
+  <div class="field">
+    <p class="section-label" style="margin-bottom:8px">Artifacts to generate</p>
+    <label class="cb-label"><input type="checkbox" class="req-cb" value="User Story" checked> User Story</label>
+    <label class="cb-label"><input type="checkbox" class="req-cb" value="BDD Scenario" checked> BDD Scenario</label>
+    <label class="cb-label"><input type="checkbox" class="req-cb" value="Acceptance Criteria" checked> Acceptance Criteria</label>
+    <label class="cb-label"><input type="checkbox" class="req-cb" value="Technical Constraints" checked> Technical Constraints</label>
+    <label class="cb-label"><input type="checkbox" class="req-cb" value="Tasks" checked> Tasks</label>
+  </div>
   <div class="error-msg" id="validationError"></div>
   <button class="primary" id="submitBtn" onclick="submitForm()">Generate Requirements</button>
 </section>
@@ -696,23 +710,23 @@ class RequirementPanel {
   <pre id="reqOutputPre" class="output-pre" style="display:none"></pre>
   <div id="reqReviewArea" style="display:none">
     <p class="review-hint">Review and edit each artifact, then click Confirm &amp; Continue.</p>
-    <div class="artifact-group">
+    <div class="artifact-group" id="req-group-userStory">
       <label class="artifact-label" for="ta-userStory">User Story</label>
       <textarea class="artifact-ta" id="ta-userStory"></textarea>
     </div>
-    <div class="artifact-group">
+    <div class="artifact-group" id="req-group-bddScenario">
       <label class="artifact-label" for="ta-bddScenario">BDD Scenario</label>
       <textarea class="artifact-ta" id="ta-bddScenario"></textarea>
     </div>
-    <div class="artifact-group">
+    <div class="artifact-group" id="req-group-acceptanceCriteria">
       <label class="artifact-label" for="ta-acceptanceCriteria">Acceptance Criteria</label>
       <textarea class="artifact-ta" id="ta-acceptanceCriteria"></textarea>
     </div>
-    <div class="artifact-group">
+    <div class="artifact-group" id="req-group-technicalConstraints">
       <label class="artifact-label" for="ta-technicalConstraints">Technical Constraints</label>
       <textarea class="artifact-ta" id="ta-technicalConstraints"></textarea>
     </div>
-    <div class="artifact-group">
+    <div class="artifact-group" id="req-group-tasks">
       <label class="artifact-label" for="ta-tasks">Tasks</label>
       <textarea class="artifact-ta" id="ta-tasks"></textarea>
     </div>
@@ -812,14 +826,21 @@ class RequirementPanel {
   function submitForm() {
     const reqId = document.getElementById('reqId').value.trim();
     const description = document.getElementById('description').value.trim();
+    const selectedReqArtifacts = Array.from(
+      document.querySelectorAll('.req-cb:checked')
+    ).map(cb => cb.value);
     const errEl = document.getElementById('validationError');
     errEl.textContent = '';
     if (!reqId || !description) {
       errEl.textContent = 'All fields are required.';
       return;
     }
+    if (selectedReqArtifacts.length === 0) {
+      errEl.textContent = 'Select at least one artifact to generate.';
+      return;
+    }
     document.getElementById('submitBtn').disabled = true;
-    vscode.postMessage({ command: 'submit', moduleName: '', reqId, description });
+    vscode.postMessage({ command: 'submit', moduleName: '', reqId, description, selectedReqArtifacts });
   }
 
   function confirmRequirements() {
@@ -914,6 +935,7 @@ class RequirementPanel {
     document.getElementById('description').value = '';
     document.getElementById('validationError').textContent = '';
     document.getElementById('submitBtn').disabled = false;
+    document.querySelectorAll('.req-cb').forEach(cb => { cb.checked = true; });
 
     document.getElementById('reqSpinner').style.display = 'flex';
     document.getElementById('reqOutputPre').style.display = 'none';
@@ -1004,6 +1026,14 @@ class RequirementPanel {
           document.getElementById(groupId).style.display = selected.includes(name) ? '' : 'none';
         }
       } else {
+        const selReq = msg.selectedReqArtifacts || ['User Story','BDD Scenario','Acceptance Criteria','Technical Constraints','Tasks'];
+        const reqGroupMap = {
+          'User Story':           'req-group-userStory',
+          'BDD Scenario':         'req-group-bddScenario',
+          'Acceptance Criteria':  'req-group-acceptanceCriteria',
+          'Technical Constraints': 'req-group-technicalConstraints',
+          'Tasks':                'req-group-tasks',
+        };
         document.getElementById('reqSpinner').style.display = 'none';
         document.getElementById('ta-userStory').value           = a.userStory || '';
         document.getElementById('ta-bddScenario').value         = a.bddScenario || '';
@@ -1011,6 +1041,9 @@ class RequirementPanel {
         document.getElementById('ta-technicalConstraints').value = a.technicalConstraints || '';
         document.getElementById('ta-tasks').value               = a.tasks || '';
         document.getElementById('ta-planningNotes').value       = '';
+        for (const [name, groupId] of Object.entries(reqGroupMap)) {
+          document.getElementById(groupId).style.display = selReq.includes(name) ? '' : 'none';
+        }
         document.getElementById('reqReviewArea').style.display = '';
       }
 
